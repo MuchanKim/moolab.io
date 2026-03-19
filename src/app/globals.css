@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f5f5;
+  --background: #FFFFFF;
   --foreground: #111214;
   --accent: #6FBB74;
   --muted: #45474E;
   --border: #e0e0e0;
-  --nav-hover: #e8e8ea;
+  --nav-hover: #efefef;
   --dropdown-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
@@ -16,7 +16,7 @@ html[data-theme="dark"] {
   --accent: #6FBB74;
   --muted: #f4f4f4;
   --border: #2a2a2a;
-  --nav-hover: #1e2023;
+  --nav-hover: #27282a;
   --dropdown-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 

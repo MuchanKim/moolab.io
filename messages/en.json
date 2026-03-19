@@ -8,8 +8,8 @@
   },
   "hero": {
     "line1": "We build",
-    "line2": "small things.",
-    "subtitle": "A personal studio for apps, ideas, and experiments."
+    "subtitle": "A personal studio for apps, ideas, and experiments.",
+    "tagline": "Build. Experiment. Ship."
   },
   "about": {
     "label": "About Moolab",

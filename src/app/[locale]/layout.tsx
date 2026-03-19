@@ -5,6 +5,7 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { CursorProvider } from '@/components/effects/CursorProvider';
 import '../globals.css';
 
 const geist = Geist({
@@ -37,19 +38,19 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} className={geist.variable} suppressHydrationWarning>
-      {/* FOUC 방지: JS 실행 전 localStorage 테마를 미리 적용 */}
-      <head>
+      <body className="antialiased">
+        {/* FOUC 방지: JS 실행 전 localStorage 테마를 미리 적용 */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();`,
           }}
         />
-      </head>
-      <body className="antialiased">
         <ThemeProvider>
-          <NextIntlClientProvider messages={messages}>
-            {children}
-          </NextIntlClientProvider>
+          <CursorProvider>
+            <NextIntlClientProvider messages={messages}>
+              {children}
+            </NextIntlClientProvider>
+          </CursorProvider>
         </ThemeProvider>
       </body>
     </html>

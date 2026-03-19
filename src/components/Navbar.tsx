@@ -2,7 +2,7 @@
 
 import { useLocale } from 'next-intl';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname, Link } from '@/i18n/navigation';
 import { useTheme } from './ThemeProvider';
 
@@ -40,8 +40,8 @@ const NAV_CONFIG = {
   scroll: {
     threshold: 20,
     blur: '12px',
-    bgDark: 'rgba(15,15,15,0.88)',
-    bgLight: 'rgba(255,255,255,0.88)',
+    bgDark: 'rgba(17,18,20,0.72)',
+    bgLight: 'rgba(245,245,245,0.72)',
     transition: 'background-color 0.3s ease, border-color 0.3s ease',
   },
   animation: {
@@ -256,6 +256,10 @@ export function Navbar() {
   const prevScrollY = useRef(0);
   const { theme } = useTheme();
 
+  useEffect(() => {
+    prevScrollY.current = window.scrollY;
+  }, []);
+
   useMotionValueEvent(scrollY, 'change', (v) => {
     const diff = v - prevScrollY.current;
     if (v > NAV_CONFIG.scroll.threshold) {
@@ -277,6 +281,7 @@ export function Navbar() {
   return (
     <motion.header
       className="fixed left-0 right-0 z-50"
+      initial={{ y: 0 }}
       animate={{ y: hidden ? '-100%' : 0 }}
       transition={{ duration: NAV_CONFIG.animation.duration, ease: NAV_CONFIG.animation.ease }}
       style={{

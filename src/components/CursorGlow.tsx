@@ -23,7 +23,7 @@ export function CursorGlow() {
     <motion.div
       aria-hidden
       className="pointer-events-none fixed inset-x-0 bottom-0 z-0"
-      style={{ top: '72px', overflow: 'hidden' }}
+      style={{ top: 0, overflow: 'hidden' }}
     >
       <motion.div
         style={{
