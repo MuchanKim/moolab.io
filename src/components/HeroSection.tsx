@@ -21,7 +21,7 @@ export function HeroSection() {
     <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
       <div className="flex flex-col items-center gap-6">
         <motion.p
-          className="text-xs font-medium tracking-[0.25em] text-[#6FBB74] uppercase"
+          className="text-xs font-medium tracking-[0.25em] text-accent uppercase"
           variants={fadeUp}
           initial="hidden"
           animate="show"
@@ -32,7 +32,7 @@ export function HeroSection() {
 
         <h1 className="flex flex-col items-center gap-1 leading-none tracking-tight">
           <motion.span
-            className="block text-[clamp(3.5rem,10vw,8rem)] font-bold text-[#1a1a1a]"
+            className="block text-[clamp(3.5rem,10vw,8rem)] font-bold text-foreground"
             variants={fadeUp}
             initial="hidden"
             animate="show"
@@ -41,7 +41,7 @@ export function HeroSection() {
             {t('line1')}
           </motion.span>
           <motion.span
-            className="block text-[clamp(3.5rem,10vw,8rem)] font-bold text-[#1a1a1a]"
+            className="block text-[clamp(3.5rem,10vw,8rem)] font-bold text-foreground"
             variants={fadeUp}
             initial="hidden"
             animate="show"
@@ -52,7 +52,7 @@ export function HeroSection() {
         </h1>
 
         <motion.p
-          className="max-w-md text-[1.05rem] leading-relaxed text-[#6b6b6b]"
+          className="max-w-md text-[1.05rem] leading-relaxed text-muted"
           variants={fadeUp}
           initial="hidden"
           animate="show"
@@ -69,9 +69,9 @@ export function HeroSection() {
         animate="show"
         custom={0.9}
       >
-        <span className="text-xs tracking-widest text-[#c0c0c0] uppercase">scroll</span>
+        <span className="text-xs tracking-widest text-muted uppercase">scroll</span>
         <motion.div
-          className="h-8 w-px bg-gradient-to-b from-[#c0c0c0] to-transparent"
+          className="h-8 w-px bg-gradient-to-b from-muted to-transparent"
           animate={{ scaleY: [1, 0.4, 1], opacity: [0.6, 1, 0.6] }}
           transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
           style={{ originY: 0 }}

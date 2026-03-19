@@ -3,7 +3,8 @@
     "about": "About",
     "news": "News",
     "apps": "Apps",
-    "shop": "Shop"
+    "shop": "Shop",
+    "contact": "Contact"
   },
   "hero": {
     "line1": "We build",
@@ -12,8 +13,23 @@
   },
   "about": {
     "label": "About Moolab",
-    "heading": "A lab run by one person.",
-    "body": "Moolab is a small personal studio where curiosity turns into products. From utility apps to side experiments — built slowly, with care."
+    "heading": "A lab run by\none person.",
+    "body": "Moolab is a small personal studio where curiosity turns into products. From utility apps to side experiments — built slowly, with care.",
+    "stat1Value": "2024",
+    "stat1Label": "Founded",
+    "stat2Value": "5+",
+    "stat2Label": "Apps Built",
+    "stat3Value": "Solo",
+    "stat3Label": "Team Size",
+    "value1Title": "Build",
+    "value1Body": "Turn ideas into real products. Even small, finished things count.",
+    "value2Title": "Experiment",
+    "value2Body": "Try unvalidated ideas without fear. That's where discoveries happen.",
+    "value3Title": "Ship",
+    "value3Body": "Shipping beats perfecting. The world teaches you what code never will.",
+    "ctaHeading": "Want to build together?",
+    "ctaBody": "Collaboration, feedback, or just a hello — always welcome.",
+    "ctaButton": "Send an email"
   },
   "contact": {
     "label": "Get in touch",
