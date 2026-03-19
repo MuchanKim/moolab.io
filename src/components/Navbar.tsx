@@ -46,7 +46,7 @@ const NAV_CONFIG = {
   },
   animation: {
     duration: 0.35,
-    ease: [0.25, 0.1, 0.25, 1] as number[],
+    ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
   },
 } as const;
 // ──────────────────────────────────────────────────────────────────────────────
