@@ -1,0 +1,25 @@
+{
+  "nav": {
+    "about": "어바웃",
+    "news": "뉴스",
+    "apps": "앱스",
+    "shop": "샵"
+  },
+  "hero": {
+    "line1": "작은 것들을",
+    "line2": "만듭니다.",
+    "subtitle": "앱, 아이디어, 실험을 위한 개인 스튜디오."
+  },
+  "about": {
+    "label": "Moolab 소개",
+    "heading": "한 사람이 운영하는 작은 실험실.",
+    "body": "Moolab은 호기심을 제품으로 바꾸는 작은 개인 스튜디오입니다. 유틸리티 앱부터 사이드 실험까지 — 천천히, 정성껏 만듭니다."
+  },
+  "contact": {
+    "label": "연락하기",
+    "email": "hello@moolab.com"
+  },
+  "footer": {
+    "rights": "© 2026 Moolab. All rights reserved."
+  }
+}

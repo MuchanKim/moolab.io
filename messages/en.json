@@ -1,0 +1,25 @@
+{
+  "nav": {
+    "about": "About",
+    "news": "News",
+    "apps": "Apps",
+    "shop": "Shop"
+  },
+  "hero": {
+    "line1": "We build",
+    "line2": "small things.",
+    "subtitle": "A personal studio for apps, ideas, and experiments."
+  },
+  "about": {
+    "label": "About Moolab",
+    "heading": "A lab run by one person.",
+    "body": "Moolab is a small personal studio where curiosity turns into products. From utility apps to side experiments — built slowly, with care."
+  },
+  "contact": {
+    "label": "Get in touch",
+    "email": "hello@moolab.com"
+  },
+  "footer": {
+    "rights": "© 2026 Moolab. All rights reserved."
+  }
+}
