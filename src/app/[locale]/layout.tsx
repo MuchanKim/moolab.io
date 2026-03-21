@@ -39,12 +39,6 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} className={geist.variable} suppressHydrationWarning>
       <body className="antialiased">
-        {/* FOUC 방지: JS 실행 전 localStorage 테마를 미리 적용 */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();`,
-          }}
-        />
         <ThemeProvider>
           <CursorProvider>
             <NextIntlClientProvider messages={messages}>

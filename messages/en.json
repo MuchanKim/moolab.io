@@ -1,13 +1,7 @@
 {
-  "nav": {
-    "about": "About",
-    "news": "News",
-    "apps": "Apps",
-    "shop": "Shop",
-    "contact": "Contact"
-  },
   "hero": {
-    "line1": "We build",
+    "typePrefix": "We build ",
+    "typeWords": "apps.|experiments.|the unexpected.|from scratch.",
     "subtitle": "A personal studio for apps, ideas, and experiments.",
     "tagline": "Build. Experiment. Ship."
   },
@@ -31,11 +25,18 @@
     "ctaBody": "Collaboration, feedback, or just a hello — always welcome.",
     "ctaButton": "Send an email"
   },
+  "comingSoon": {
+    "emoji": "\uD83D\uDECB\uFE0F",
+    "title": "Oops! The owner stepped out.",
+    "body": "Looks like this page is still being built. We'll let you know when it's ready — pinky promise.",
+    "backButton": "Back to home",
+    "hint": "Coming soon"
+  },
   "contact": {
     "label": "Get in touch",
     "email": "hello@moolab.com"
   },
   "footer": {
-    "rights": "© 2026 Moolab. All rights reserved."
+    "rights": "\u00A9 2026 Moolab. All rights reserved."
   }
 }

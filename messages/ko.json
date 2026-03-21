@@ -1,13 +1,7 @@
 {
-  "nav": {
-    "about": "어바웃",
-    "news": "뉴스",
-    "apps": "앱스",
-    "shop": "샵",
-    "contact": "연락하기"
-  },
   "hero": {
-    "line1": "우리는",
+    "typePrefix": "우리는 ",
+    "typeWords": "앱을 만듭니다.|실험합니다.|예상 밖을 만듭니다.|처음부터 만듭니다.",
     "subtitle": "앱, 아이디어, 실험을 위한 개인 스튜디오.",
     "tagline": "만들고. 실험하고. 배포하고."
   },
@@ -31,11 +25,18 @@
     "ctaBody": "협업, 피드백, 또는 그냥 안녕이라도 — 언제든 환영합니다.",
     "ctaButton": "이메일 보내기"
   },
+  "comingSoon": {
+    "emoji": "\uD83D\uDECB\uFE0F",
+    "title": "앗! 집주인이 자리를 비웠나봐요.",
+    "body": "이 페이지는 아직 준비 중이에요. 다 되면 연락할게요 — 새끼손가락 걸고 약속!",
+    "backButton": "홈으로 돌아가기",
+    "hint": "준비 중"
+  },
   "contact": {
     "label": "연락하기",
     "email": "hello@moolab.com"
   },
   "footer": {
-    "rights": "© 2026 Moolab. All rights reserved."
+    "rights": "\u00A9 2026 Moolab. All rights reserved."
   }
 }

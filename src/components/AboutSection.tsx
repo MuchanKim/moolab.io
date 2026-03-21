@@ -37,14 +37,14 @@ export function AboutSection() {
   const tc = useTranslations('contact');
 
   return (
-    <section id="about" className="relative z-10 px-6 md:px-12">
+    <section id="about" className="relative z-10 px-4 sm:px-6 md:px-12">
 
       {/* Block 1: Mission + Stats */}
-      <div className="mx-auto max-w-6xl py-32 md:py-40">
+      <div className="mx-auto max-w-6xl py-20 sm:py-28 md:py-40">
 
         {/* Label */}
         <motion.div
-          className="mb-16 flex items-center gap-3"
+          className="mb-10 sm:mb-16 flex items-center gap-3"
           variants={inView}
           initial="hidden"
           whileInView="show"
@@ -57,9 +57,9 @@ export function AboutSection() {
         </motion.div>
 
         {/* Heading + Stats row */}
-        <div className="flex flex-col gap-12 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-10 sm:gap-12 md:flex-row md:items-end md:justify-between">
           <motion.h2
-            className="text-[clamp(2.5rem,5vw,4rem)] font-bold leading-tight tracking-tight text-foreground md:max-w-lg"
+            className="text-[clamp(1.8rem,5vw,4rem)] font-bold leading-tight tracking-tight text-foreground md:max-w-lg"
             variants={inView}
             initial="hidden"
             whileInView="show"
@@ -69,7 +69,7 @@ export function AboutSection() {
           </motion.h2>
 
           <motion.div
-            className="flex gap-10 md:gap-14 md:pb-2"
+            className="flex gap-8 sm:gap-10 md:gap-14 md:pb-2"
             variants={stagger}
             initial="hidden"
             whileInView="show"
@@ -77,10 +77,10 @@ export function AboutSection() {
           >
             {STATS.map(({ valueKey, labelKey }) => (
               <motion.div key={valueKey} variants={cardVariant} className="flex flex-col gap-1">
-                <span className="text-[2.2rem] font-bold tracking-tight text-foreground leading-none">
+                <span className="text-[1.6rem] sm:text-[2.2rem] font-bold tracking-tight text-foreground leading-none">
                   {t(valueKey)}
                 </span>
-                <span className="text-xs tracking-[0.15em] text-muted uppercase">
+                <span className="text-[10px] sm:text-xs tracking-[0.15em] text-muted uppercase">
                   {t(labelKey)}
                 </span>
               </motion.div>
@@ -90,7 +90,7 @@ export function AboutSection() {
 
         {/* Description */}
         <motion.p
-          className="mt-12 max-w-xl text-lg leading-relaxed text-muted"
+          className="mt-8 sm:mt-12 max-w-xl text-base sm:text-lg leading-relaxed text-muted"
           variants={inView}
           initial="hidden"
           whileInView="show"
@@ -110,9 +110,9 @@ export function AboutSection() {
       />
 
       {/* Block 2: Value Cards */}
-      <div className="mx-auto max-w-6xl py-32">
+      <div className="mx-auto max-w-6xl py-20 sm:py-28 md:py-32">
         <motion.div
-          className="grid grid-cols-1 gap-6 md:grid-cols-3"
+          className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3"
           variants={stagger}
           initial="hidden"
           whileInView="show"
@@ -122,10 +122,10 @@ export function AboutSection() {
             <motion.div
               key={num}
               variants={cardVariant}
-              className="flex flex-col gap-5 rounded-2xl border border-border p-8 hover:border-accent transition-colors duration-300"
+              className="flex flex-col gap-4 sm:gap-5 rounded-2xl border border-border p-6 sm:p-8 hover:border-accent transition-colors duration-300"
             >
               <span className="text-xs font-medium tracking-[0.2em] text-muted">{num}</span>
-              <h3 className="text-xl font-semibold text-foreground">{t(titleKey)}</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-foreground">{t(titleKey)}</h3>
               <p className="text-sm leading-relaxed text-muted">{t(bodyKey)}</p>
             </motion.div>
           ))}
@@ -142,16 +142,16 @@ export function AboutSection() {
       />
 
       {/* Block 3: CTA Banner */}
-      <div className="mx-auto max-w-6xl py-32">
+      <div className="mx-auto max-w-6xl py-20 sm:py-28 md:py-32">
         <motion.div
-          className="flex flex-col gap-8 rounded-3xl bg-foreground px-10 py-14 md:flex-row md:items-center md:justify-between"
+          className="flex flex-col gap-6 sm:gap-8 rounded-2xl sm:rounded-3xl bg-foreground px-6 py-10 sm:px-10 sm:py-14 md:flex-row md:items-center md:justify-between"
           variants={inView}
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: '-60px' }}
         >
           <div className="flex flex-col gap-3">
-            <h3 className="text-[clamp(1.5rem,3vw,2.2rem)] font-bold leading-tight text-background">
+            <h3 className="text-[clamp(1.3rem,3vw,2.2rem)] font-bold leading-tight text-background">
               {t('ctaHeading')}
             </h3>
             <p className="max-w-sm text-sm leading-relaxed text-background opacity-60">
@@ -161,7 +161,7 @@ export function AboutSection() {
 
           <a
             href={`mailto:${tc('email')}`}
-            className="shrink-0 rounded-full border-2 border-background px-8 py-3 text-sm font-semibold text-background hover:bg-background hover:text-foreground transition-all duration-200 uppercase tracking-wider"
+            className="shrink-0 self-start md:self-auto rounded-full border-2 border-background px-6 py-2.5 sm:px-8 sm:py-3 text-xs sm:text-sm font-semibold text-background hover:bg-background hover:text-foreground transition-all duration-200 uppercase tracking-wider"
           >
             {t('ctaButton')}
           </a>

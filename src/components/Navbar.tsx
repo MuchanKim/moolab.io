@@ -2,7 +2,7 @@
 
 import { useLocale } from 'next-intl';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, usePathname, Link } from '@/i18n/navigation';
 import { useTheme } from './ThemeProvider';
 
@@ -49,6 +49,8 @@ const NAV_CONFIG = {
     ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
   },
 } as const;
+
+const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 // ──────────────────────────────────────────────────────────────────────────────
 
 function MoolabLogo() {
@@ -115,8 +117,8 @@ function LanguageSwitcher() {
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
-      {/* 트리거 버튼 */}
       <button
+        onClick={() => setOpen(o => !o)}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -145,7 +147,6 @@ function LanguageSwitcher() {
         </motion.span>
       </button>
 
-      {/* 드롭다운 */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -171,7 +172,7 @@ function LanguageSwitcher() {
                 key={value}
                 label={label}
                 active={value === locale}
-                onClick={() => router.replace(pathname, { locale: value })}
+                onClick={() => { router.replace(pathname, { locale: value }); setOpen(false); }}
               />
             ))}
           </motion.div>
@@ -242,29 +243,167 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   );
 }
 
+// ─── 햄버거 아이콘 (열기/닫기 애니메이션) ────────────────────────────────────
+function HamburgerIcon({ isOpen }: { isOpen: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <motion.line
+        x1="3" x2="17"
+        animate={isOpen ? { y1: 10, y2: 10, rotate: 45 } : { y1: 5, y2: 5, rotate: 0 }}
+        transition={{ duration: 0.25, ease: EASE }}
+        style={{ transformOrigin: 'center' }}
+      />
+      <motion.line
+        x1="3" y1="10" x2="17" y2="10"
+        animate={{ opacity: isOpen ? 0 : 1 }}
+        transition={{ duration: 0.15 }}
+      />
+      <motion.line
+        x1="3" x2="17"
+        animate={isOpen ? { y1: 10, y2: 10, rotate: -45 } : { y1: 15, y2: 15, rotate: 0 }}
+        transition={{ duration: 0.25, ease: EASE }}
+        style={{ transformOrigin: 'center' }}
+      />
+    </svg>
+  );
+}
+
+// ─── 모바일 메뉴 오버레이 ────────────────────────────────────────────────────
+function MobileMenu({ onClose }: { onClose: () => void }) {
+  const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { theme } = useTheme();
+
+  const langOptions = [
+    { short: 'KO', label: '한국어', value: 'ko' },
+    { short: 'EN', label: 'English (US)', value: 'en' },
+  ];
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-40"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      {/* 배경 백드롭 */}
+      <motion.div
+        className="absolute inset-0"
+        style={{
+          backgroundColor: theme === 'dark' ? 'rgba(17,18,20,0.85)' : 'rgba(245,245,245,0.85)',
+          backdropFilter: 'blur(20px)',
+        }}
+        onClick={onClose}
+      />
+
+      {/* 메뉴 콘텐츠 */}
+      <motion.nav
+        className="relative flex flex-col items-center justify-center h-full gap-2 px-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 10 }}
+        transition={{ duration: 0.3, ease: EASE, delay: 0.05 }}
+      >
+        {/* 네비게이션 링크 */}
+        {NAV_LINKS.map(({ label, href }, i) => (
+          <motion.div
+            key={label}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASE, delay: 0.08 + i * 0.05 }}
+          >
+            <Link
+              href={href}
+              onClick={onClose}
+              className="block py-3 text-center text-2xl font-medium text-foreground hover:text-accent transition-colors"
+            >
+              {label}
+            </Link>
+          </motion.div>
+        ))}
+
+        {/* 구분선 */}
+        <motion.div
+          className="my-4 h-px w-16 bg-border"
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 0.5, ease: EASE, delay: 0.25 }}
+        />
+
+        {/* 하단 컨트롤: 다크모드 + 언어 */}
+        <motion.div
+          className="flex items-center gap-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+        >
+          <DarkModeToggle />
+
+          <div className="flex gap-2">
+            {langOptions.map(({ short, value }) => (
+              <button
+                key={value}
+                onClick={() => { router.replace(pathname, { locale: value }); onClose(); }}
+                className="px-3 py-1.5 text-xs font-medium tracking-widest uppercase rounded-full transition-colors cursor-pointer"
+                style={{
+                  color: value === locale ? 'var(--foreground)' : 'var(--muted)',
+                  backgroundColor: value === locale ? 'var(--nav-hover)' : 'transparent',
+                  fontWeight: value === locale ? 600 : 400,
+                }}
+              >
+                {short}
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      </motion.nav>
+    </motion.div>
+  );
+}
+
+// 네비게이션 탭은 언어와 무관하게 항상 영어
 const NAV_LINKS = [
-  { key: 'about',   label: 'About',   href: '/' },
-  { key: 'apps',    label: 'Apps',    href: '#' },
-  { key: 'store',   label: 'Store',   href: '#' },
-  { key: 'contact', label: 'Contact', href: '#' },
+  { label: 'About',  href: '/about' },
+  { label: 'Apps',   href: '/apps' },
+  { label: 'Store',  href: '/store' },
 ] as const;
 
 export function Navbar() {
   const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const prevScrollY = useRef(0);
   const { theme } = useTheme();
+
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   useEffect(() => {
     prevScrollY.current = window.scrollY;
   }, []);
 
+  // ESC 키로 모바일 메뉴 닫기
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeMobile(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileOpen, closeMobile]);
+
+  // 모바일 메뉴 열림 시 스크롤 잠금
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
   useMotionValueEvent(scrollY, 'change', (v) => {
+    if (mobileOpen) return;
     const diff = v - prevScrollY.current;
     if (v > NAV_CONFIG.scroll.threshold) {
       setScrolled(true);
-      setHidden(diff > 0); // 아래로 → 숨김, 위로 → 표시
+      setHidden(diff > 0);
     } else {
       setScrolled(false);
       setHidden(false);
@@ -279,44 +418,60 @@ export function Navbar() {
     : 'rgba(0,0,0,0)';
 
   return (
-    <motion.header
-      className="fixed left-0 right-0 z-50"
-      initial={{ y: 0 }}
-      animate={{ y: hidden ? '-100%' : 0 }}
-      transition={{ duration: NAV_CONFIG.animation.duration, ease: NAV_CONFIG.animation.ease }}
-      style={{
-        top: NAV_CONFIG.topOffset,
-        backgroundColor: bgColor,
-        backdropFilter: scrolled ? `blur(${NAV_CONFIG.scroll.blur})` : 'none',
-        borderBottom: scrolled ? '1px solid var(--border)' : '1px solid transparent',
-        transition: NAV_CONFIG.scroll.transition,
-      }}
-    >
-      <nav className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-5 md:px-12">
+    <>
+      <motion.header
+        className="fixed left-0 right-0 z-50"
+        initial={{ y: 0 }}
+        animate={{ y: hidden && !mobileOpen ? '-100%' : 0 }}
+        transition={{ duration: NAV_CONFIG.animation.duration, ease: NAV_CONFIG.animation.ease }}
+        style={{
+          top: NAV_CONFIG.topOffset,
+          backgroundColor: mobileOpen ? 'transparent' : bgColor,
+          backdropFilter: scrolled && !mobileOpen ? `blur(${NAV_CONFIG.scroll.blur})` : 'none',
+          borderBottom: scrolled && !mobileOpen ? '1px solid var(--border)' : '1px solid transparent',
+          transition: NAV_CONFIG.scroll.transition,
+        }}
+      >
+        <nav className="relative mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-6 sm:py-5 md:px-12">
 
-        {/* 로고 */}
-        <a href="https://moolab.io" className="cursor-pointer">
-          <MoolabLogo />
-        </a>
+          {/* 로고 */}
+          <a href="/" className="cursor-pointer relative z-50">
+            <MoolabLogo />
+          </a>
 
-        {/* 탭 - 페이지 정중앙 absolute */}
-        <ul className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 md:flex">
-          {NAV_LINKS.map(({ key, label, href }) => (
-            <li key={key}>
-              <NavLink href={href}>
-                {label}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+          {/* 데스크탑: 중앙 탭 */}
+          <ul className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 md:flex">
+            {NAV_LINKS.map(({ label, href }) => (
+              <li key={label}>
+                <NavLink href={href}>
+                  {label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
 
-        {/* 우측: 다크모드 + 언어 */}
-        <div className="hidden items-center md:flex" style={{ gap: NAV_CONFIG.rightBar.gap }}>
-          <DarkModeToggle />
-          <LanguageSwitcher />
-        </div>
+          {/* 데스크탑: 우측 컨트롤 */}
+          <div className="hidden items-center md:flex" style={{ gap: NAV_CONFIG.rightBar.gap }}>
+            <DarkModeToggle />
+            <LanguageSwitcher />
+          </div>
 
-      </nav>
-    </motion.header>
+          {/* 모바일: 햄버거 버튼 */}
+          <button
+            className="relative z-50 flex items-center justify-center w-10 h-10 text-foreground md:hidden cursor-pointer"
+            onClick={() => setMobileOpen(o => !o)}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          >
+            <HamburgerIcon isOpen={mobileOpen} />
+          </button>
+
+        </nav>
+      </motion.header>
+
+      {/* 모바일 메뉴 오버레이 */}
+      <AnimatePresence>
+        {mobileOpen && <MobileMenu onClose={closeMobile} />}
+      </AnimatePresence>
+    </>
   );
 }
