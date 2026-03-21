@@ -2,101 +2,11 @@
 
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { useState, useEffect, useReducer } from 'react';
-import { ConstellationWeb } from './effects/ConstellationWeb';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { NeuralNetwork } from './effects/NeuralNetwork';
+import { useNeuralGame } from '@/hooks/useNeuralGame';
 
 const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
-
-// ─── 타이프라이터 설정 ───────────────────────────────────────────────────────
-const TYPER = {
-  charSpeed:      70,
-  eraseSpeed:     35,
-  pauseAfterType: 1400,
-  pauseAfterErase: 200,
-  cursorBlinkMs:  530,
-} as const;
-
-// ─── 타이프라이터 상태 머신 ──────────────────────────────────────────────────
-type TyperPhase = 'typing' | 'pause' | 'erasing' | 'done';
-
-interface TyperState {
-  phase: TyperPhase;
-  wordIdx: number;
-  displayed: string;
-  firstWordDone: boolean;
-}
-
-type TyperAction =
-  | { type: 'TYPE_CHAR'; word: string }
-  | { type: 'WORD_COMPLETE' }
-  | { type: 'START_ERASE' }
-  | { type: 'ERASE_CHAR' }
-  | { type: 'NEXT_WORD' }
-  | { type: 'FINISH' };
-
-const typerInit: TyperState = {
-  phase: 'typing',
-  wordIdx: 0,
-  displayed: '',
-  firstWordDone: false,
-};
-
-function typerReducer(s: TyperState, a: TyperAction): TyperState {
-  switch (a.type) {
-    case 'TYPE_CHAR':
-      return { ...s, displayed: a.word.slice(0, s.displayed.length + 1) };
-    case 'WORD_COMPLETE':
-      return { ...s, phase: 'pause', firstWordDone: true };
-    case 'START_ERASE':
-      return { ...s, phase: 'erasing' };
-    case 'ERASE_CHAR':
-      return { ...s, displayed: s.displayed.slice(0, -1) };
-    case 'NEXT_WORD':
-      return { ...s, phase: 'typing', wordIdx: s.wordIdx + 1, displayed: '' };
-    case 'FINISH':
-      return { ...s, phase: 'done' };
-    default:
-      return s;
-  }
-}
-
-function useTypewriter(words: string[]) {
-  const [state, dispatch] = useReducer(typerReducer, typerInit);
-
-  useEffect(() => {
-    if (state.phase === 'done') return;
-    const word = words[state.wordIdx];
-
-    if (state.phase === 'typing') {
-      if (state.displayed.length < word.length) {
-        const t = setTimeout(() => dispatch({ type: 'TYPE_CHAR', word }), TYPER.charSpeed);
-        return () => clearTimeout(t);
-      }
-      const t = setTimeout(() => dispatch({ type: 'WORD_COMPLETE' }), TYPER.pauseAfterType);
-      return () => clearTimeout(t);
-    }
-
-    if (state.phase === 'pause') {
-      const t = setTimeout(() => dispatch({ type: 'START_ERASE' }), 300);
-      return () => clearTimeout(t);
-    }
-
-    if (state.phase === 'erasing') {
-      if (state.displayed.length > 0) {
-        const t = setTimeout(() => dispatch({ type: 'ERASE_CHAR' }), TYPER.eraseSpeed);
-        return () => clearTimeout(t);
-      }
-      if (state.wordIdx + 1 >= words.length) {
-        const t = setTimeout(() => dispatch({ type: 'FINISH' }), 300);
-        return () => clearTimeout(t);
-      }
-      const t = setTimeout(() => dispatch({ type: 'NEXT_WORD' }), TYPER.pauseAfterErase);
-      return () => clearTimeout(t);
-    }
-  }, [state, words]);
-
-  return state;
-}
 
 // ─── SVG paths ───────────────────────────────────────────────────────────────
 const PATHS = {
@@ -113,69 +23,97 @@ const MOO_OFFSET = 89;
 
 export function HeroSection() {
   const t = useTranslations('hero');
-  const prefix = t('typePrefix');
-  const words = t('typeWords').split('|');
+  const game = useNeuralGame();
+  const sectionRef = useRef<HTMLElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
-  const typer = useTypewriter(words);
   const [showLogo, setShowLogo] = useState(false);
   const [showLab, setShowLab] = useState(false);
   const [showEnd, setShowEnd] = useState(false);
 
-  // 타이프라이터 완료 → 로고 시퀀스
-  useEffect(() => {
-    if (typer.phase !== 'done') return;
-    const t1 = setTimeout(() => setShowLogo(true), 600);
-    const t2 = setTimeout(() => setShowLab(true), 2300);
-    const t3 = setTimeout(() => setShowEnd(true), 3700);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [typer.phase]);
+  const isClearedAndDone = game.isCleared && game.clearWaveProgress >= 1;
 
-  const showTypewriter = typer.phase !== 'done';
+  // 마운트 즉시 로고 시퀀스 시작
+  useEffect(() => {
+    const t1 = setTimeout(() => setShowLogo(true), 400);
+    const t2 = setTimeout(() => setShowLab(true), 2000);
+    const t3 = setTimeout(() => setShowEnd(true), 3400);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  // ResizeObserver for hidden neuron positions
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      game.updatePositions(width, height);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [game.updatePositions]);
+
+  // Logo glitch rAF loop
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    let rafId = 0;
+    let nextGlitchFrame = 0;
+
+    const glitchLoop = () => {
+      const count = game.activatedCount;
+      if (count === 0 || isClearedAndDone) {
+        svg.style.transform = '';
+        rafId = requestAnimationFrame(glitchLoop);
+        return;
+      }
+
+      const intensity = count / 5; // 0.2 ~ 1.0
+      nextGlitchFrame--;
+
+      if (nextGlitchFrame <= 0) {
+        const dx = (Math.random() - 0.5) * intensity * 4;
+        const dy = (Math.random() - 0.5) * intensity * 2;
+        const skew = (Math.random() - 0.5) * intensity * 1.5;
+        svg.style.transform = `translate(${dx}px, ${dy}px) skewX(${skew}deg)`;
+
+        if (Math.random() < 0.3) {
+          nextGlitchFrame = Math.floor(Math.random() * 2) + 1;
+        } else {
+          svg.style.transform = '';
+          nextGlitchFrame = Math.floor(Math.random() * (60 / (intensity + 0.2)));
+        }
+      }
+
+      rafId = requestAnimationFrame(glitchLoop);
+    };
+
+    rafId = requestAnimationFrame(glitchLoop);
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (svg) svg.style.transform = '';
+    };
+  }, [game.activatedCount, isClearedAndDone]);
+
+  // Logo opacity: dimmer at start, brightens with activations
+  const logoOpacity = isClearedAndDone ? 1 : 0.5 + game.activatedCount * 0.1;
 
   return (
-    <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 sm:px-6 text-center overflow-hidden">
-      <ConstellationWeb />
+    <section
+      ref={sectionRef}
+      className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 sm:px-6 text-center overflow-hidden"
+    >
+      <NeuralNetwork
+        hiddenNeurons={game.hiddenNeurons}
+        onActivate={game.activate}
+        clearWaveProgress={game.clearWaveProgress}
+        isCleared={game.isCleared}
+      />
 
       <div className="relative z-10 flex flex-col items-center gap-4 sm:gap-6 w-full max-w-4xl">
 
-        {/* ── 스테이지 (타이프라이터 + SVG 겹침) ─────────────────── */}
+        {/* ── SVG 워드마크 ─────────────────────────────────────────── */}
         <div className="relative w-full min-h-[180px] sm:min-h-[240px] md:min-h-[280px]">
-
-          {/* ── 타이프라이터 레이어 (absolute) ──────────────────────── */}
-          <motion.div
-            className="absolute inset-0 flex flex-col items-center justify-center"
-            animate={{
-              opacity: showTypewriter ? 1 : 0,
-              y: showTypewriter ? 0 : -20,
-              filter: showTypewriter ? 'blur(0px)' : 'blur(6px)',
-            }}
-            transition={{ duration: 0.5, ease: EASE }}
-          >
-            <h1
-              className="leading-none tracking-tight text-center"
-              style={{ fontSize: 'clamp(2.2rem, 8vw, 6rem)', fontWeight: 700 }}
-            >
-              <span className="text-foreground">{prefix}</span>
-              <span style={{ color: 'var(--accent)' }}>{typer.displayed}</span>
-              <motion.span
-                className="inline-block w-[3px] rounded-sm ml-1 align-middle"
-                style={{ backgroundColor: 'var(--accent)', height: '0.72em' }}
-                animate={{ opacity: [1, 0] }}
-                transition={{ duration: TYPER.cursorBlinkMs / 1000, repeat: Infinity, repeatType: 'reverse' }}
-              />
-            </h1>
-
-            <motion.p
-              className="mt-4 sm:mt-6 max-w-xs sm:max-w-md text-sm sm:text-[1.05rem] leading-relaxed text-muted text-center"
-              initial={{ opacity: 0, y: 12 }}
-              animate={typer.firstWordDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
-              transition={{ duration: 0.7, ease: EASE }}
-            >
-              {t('subtitle')}
-            </motion.p>
-          </motion.div>
-
-          {/* ── SVG 워드마크 레이어 (absolute) ──────────────────────── */}
           <motion.div
             className="absolute inset-0 flex flex-col items-center justify-center"
             initial={{ opacity: 0 }}
@@ -186,11 +124,25 @@ export function HeroSection() {
             transition={{ duration: 0.7, ease: EASE }}
           >
             <svg
+              ref={svgRef}
               viewBox="0 0 452 173"
               className="w-56 sm:w-72 md:w-[380px] h-auto"
-              style={{ color: 'var(--foreground)' }}
+              style={{ color: 'var(--foreground)', opacity: logoOpacity }}
               aria-label="moolab"
+              filter={game.clearWaveProgress > 0 ? 'url(#logoGlow)' : undefined}
             >
+              {game.clearWaveProgress > 0 && (
+                <defs>
+                  <filter id="logoGlow">
+                    <feGaussianBlur stdDeviation={game.clearWaveProgress * 6} result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+              )}
+
               <motion.g
                 animate={{ x: showLab ? 0 : MOO_OFFSET }}
                 transition={
@@ -255,9 +207,30 @@ export function HeroSection() {
               {t('tagline')}
             </motion.p>
           </motion.div>
-
         </div>
       </div>
+
+      {/* ── 진행 인디케이터 (5 dots) ─────────────────────────────── */}
+      {game.activatedCount > 0 && !game.isCleared && (
+        <motion.div
+          className="absolute bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 flex gap-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          {game.hiddenNeurons.map((hn) => (
+            <motion.div
+              key={hn.id}
+              className="w-2 h-2 rounded-full"
+              style={{
+                backgroundColor: hn.activated ? 'var(--accent)' : 'var(--border)',
+              }}
+              animate={hn.activated ? { scale: [1, 1.5, 1] } : {}}
+              transition={{ duration: 0.4 }}
+            />
+          ))}
+        </motion.div>
+      )}
 
       {/* ── 스크롤 인디케이터 ──────────────────────────────────────── */}
       <motion.div
