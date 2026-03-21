@@ -186,6 +186,7 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
     if (canvas.parentElement) ro.observe(canvas.parentElement);
 
     const ripples: Ripple[] = [];
+    let newStars: {x: number; y: number; size: number; hue: number; phase: number; freq: number}[] = [];
 
     const handleClick = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -251,6 +252,19 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
       const my = cursor.current.y - rect.top;
       const cursorIn = mx > -50 && mx < W + 50 && my > -50 && my < H + 50;
 
+      // ── 블랙홀 중력 (물리 오버라이드) ────────────────────────────
+      const cwp = clearWaveRef.current;
+      if (cwp > 0.15 && cwp < 0.55) {
+        const centerX = W / 2;
+        const centerY = H / 2;
+        const pullPhase = Math.min(1, (cwp - 0.15) / 0.3);
+        const pullStrength = 0.01 + pullPhase * 0.12;
+        for (const n of neurons) {
+          n.vx += (centerX - n.x) * pullStrength;
+          n.vy += (centerY - n.y) * pullStrength;
+        }
+      }
+
       // ── 물리 업데이트 ──────────────────────────────────────────
       for (const n of neurons) {
         n.wanderAngle += n.wanderFreq;
@@ -290,6 +304,10 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
         ctx.fill();
       }
 
+      // ── 시냅스 + 신호 + 뉴런 렌더링 (페이즈 3-4에서 억제) ──────
+      const suppressNormalRendering = cwp >= 0.45;
+
+      if (!suppressNormalRendering) {
       // ── 시냅스 (항상 희미하게 + 커서 근처에서 밝게) ──────────────
       const activeSynapses: [number, number, number][] = []; // [i, j, cursorFade]
       const linkSq = cfg.linkDistance * cfg.linkDistance;
@@ -519,6 +537,7 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
           ctx.fill();
         }
       }
+      } // end suppressNormalRendering
 
       // ── 히든 뉴런 렌더링 ───────────────────────────────────────
       const hns = hiddenNeuronsRef.current;
@@ -786,131 +805,181 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
         }
       }
 
-      // ── 클리어 웨이브 (3-phase epic sequence) ──────────────────
-      const cwp = clearWaveRef.current;
+      // ── 클리어 웨이브 (4-phase epic sequence) ──────────────────
       const centerX = W / 2;
       const centerY = H / 2;
 
       if (cwp > 0) {
         const GOLD_CW = 45;
 
-        // Phase 1 (0 → 0.3): Gathering — neurons drift toward center
-        if (cwp <= 0.3) {
-          const phase1 = cwp / 0.3; // 0→1
-          const gatherStrength = smoothstep(phase1) * 0.03;
-          for (const n of neurons) {
-            const dx = centerX - n.x;
-            const dy = centerY - n.y;
-            n.vx += dx * gatherStrength;
-            n.vy += dy * gatherStrength;
-            // Shift color toward gold
-            n.activationSmooth = Math.min(1, n.activationSmooth + phase1 * 0.02);
+        // Phase 1 (0 → 0.15): Ripple Pulse — golden shockwave rings from hidden neurons
+        if (cwp <= 0.15) {
+          const phase1 = cwp / 0.15; // 0→1
+          const hns = hiddenNeuronsRef.current;
+          if (hns) {
+            for (const hn of hns) {
+              if (!hn.activated) continue;
+              const ringR = phase1 * 150;
+              const ringAlpha = (1 - phase1) * 0.4;
+              ctx.save();
+              ctx.shadowBlur = 12;
+              ctx.shadowColor = `hsla(${GOLD_CW}, 90%, 70%, ${ringAlpha * 0.6})`;
+              ctx.beginPath();
+              ctx.arc(hn.x, hn.y, ringR, 0, Math.PI * 2);
+              ctx.strokeStyle = `hsla(${GOLD_CW}, 90%, 75%, ${ringAlpha})`;
+              ctx.lineWidth = 2 + (1 - phase1) * 3;
+              ctx.stroke();
+              ctx.restore();
+            }
           }
-
-          // Synapses brighten as neurons converge
-          if (phase1 > 0.3) {
-            const brightR = Math.max(W, H) * (1 - phase1 * 0.5);
-            const brightGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, brightR);
-            brightGrad.addColorStop(0, `hsla(${GOLD_CW}, 80%, 70%, ${phase1 * 0.04})`);
-            brightGrad.addColorStop(1, `hsla(${GOLD_CW}, 70%, 60%, 0)`);
-            ctx.fillStyle = brightGrad;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, brightR, 0, Math.PI * 2);
-            ctx.fill();
+          // All neurons pulse brighter
+          for (const n of neurons) {
+            n.activationSmooth = Math.min(1, n.activationSmooth + phase1 * 0.03);
           }
         }
 
-        // Phase 2 (0.3 → 0.6): Convergence — neurons accelerate to center, brightness spikes
-        if (cwp > 0.3 && cwp <= 0.6) {
-          const phase2 = (cwp - 0.3) / 0.3; // 0→1
-          const accelStrength = smoothstep(phase2) * 0.08;
-          for (const n of neurons) {
-            const dx = centerX - n.x;
-            const dy = centerY - n.y;
-            n.vx += dx * accelStrength;
-            n.vy += dy * accelStrength;
-            n.activationSmooth = Math.min(1, n.activationSmooth + phase2 * 0.05);
+        // Phase 2 (0.15 → 0.45): Black Hole Formation
+        if (cwp > 0.15 && cwp <= 0.45) {
+          const phase2 = (cwp - 0.15) / 0.3; // 0→1
+          const bhRadius = phase2 * 80;
+          const bhAlpha = smoothstep(phase2);
+
+          // Dark center
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, bhRadius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(0, 0, 0, ${bhAlpha})`;
+          ctx.fill();
+
+          // Accretion disk (rotating gradient ring)
+          for (let ring = 0; ring < 3; ring++) {
+            const ringR = bhRadius + 10 + ring * 15;
+            const ringAlpha = bhAlpha * (0.3 - ring * 0.08);
+            const rotAngle = frame * 0.02 + ring * 0.5;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, ringR, rotAngle, rotAngle + Math.PI * 1.5);
+            ctx.strokeStyle = `hsla(35, 80%, 60%, ${ringAlpha})`;
+            ctx.lineWidth = 3 - ring * 0.5;
+            ctx.stroke();
           }
 
-          // Massive glow buildup at center
-          const glowR = 80 + phase2 * 200;
-          const glowAlpha = phase2 * 0.3;
+          // Synapses stretch and brighten
+          const brightR = Math.max(W, H) * (1 - phase2 * 0.3);
+          const brightGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, brightR);
+          brightGrad.addColorStop(0, `hsla(${GOLD_CW}, 80%, 70%, ${phase2 * 0.06})`);
+          brightGrad.addColorStop(1, `hsla(${GOLD_CW}, 70%, 60%, 0)`);
+          ctx.fillStyle = brightGrad;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, brightR, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Brighten neurons
+          for (const n of neurons) {
+            n.activationSmooth = Math.min(1, n.activationSmooth + phase2 * 0.04);
+          }
+        }
+
+        // Phase 3 (0.45 → 0.55): Collapse & Flash
+        if (cwp > 0.45 && cwp <= 0.55) {
+          const phase3 = (cwp - 0.45) / 0.1; // 0→1
+
+          // Massive golden glow at center
+          const glowR = 120 + phase3 * 200;
+          const glowAlpha = (1 - phase3 * 0.5) * 0.5;
           const cGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowR);
-          cGrad.addColorStop(0, `hsla(${GOLD_CW}, 95%, ${isDark ? 85 : 80}%, ${glowAlpha})`);
-          cGrad.addColorStop(0.3, `hsla(${GOLD_CW}, 90%, ${isDark ? 75 : 65}%, ${glowAlpha * 0.5})`);
+          cGrad.addColorStop(0, `hsla(${GOLD_CW}, 95%, ${isDark ? 90 : 85}%, ${glowAlpha})`);
+          cGrad.addColorStop(0.3, `hsla(${GOLD_CW}, 90%, ${isDark ? 75 : 65}%, ${glowAlpha * 0.4})`);
           cGrad.addColorStop(1, `hsla(${GOLD_CW}, 80%, ${isDark ? 60 : 50}%, 0)`);
           ctx.fillStyle = cGrad;
           ctx.beginPath();
           ctx.arc(centerX, centerY, glowR, 0, Math.PI * 2);
           ctx.fill();
+
+          // WHITE FLASH — peaks at cwp ~0.52 (phase3 ~0.7), fades by cwp 0.55
+          const flashCenter = 0.7;
+          const flashDist = Math.abs(phase3 - flashCenter);
+          const flashAlpha = Math.max(0, 1 - flashDist / 0.3) * 0.9;
+          if (flashAlpha > 0) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+            ctx.fillRect(0, 0, W, H);
+          }
+
+          // Suppress all neurons
+          for (const n of neurons) {
+            n.activationSmooth = 0;
+          }
         }
 
-        // Phase 3 (0.6 → 1.0): Explosion — flash, scatter outward, golden rain
-        if (cwp > 0.6) {
-          const phase3 = (cwp - 0.6) / 0.4; // 0→1
+        // Phase 4 (0.55 → 1.0): New Universe — stars + aurora
+        if (cwp > 0.55) {
+          const phase4 = Math.min(1, (cwp - 0.55) / 0.2); // fade-in 0→1 over 0.55→0.75
+          const fadeAlpha = smoothstep(phase4);
 
-          // Bright flash at center (white→gold fade)
-          if (phase3 < 0.3) {
-            const flashP = phase3 / 0.3;
-            const flashR = 50 + flashP * 300;
-            const flashAlpha = (1 - flashP) * 0.6;
-            const flashGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, flashR);
-            const flashL = lerp(97, 80, flashP);
-            const flashS = lerp(30, 90, flashP);
-            flashGrad.addColorStop(0, `hsla(${GOLD_CW}, ${flashS}%, ${flashL}%, ${flashAlpha})`);
-            flashGrad.addColorStop(0.3, `hsla(${GOLD_CW}, ${flashS + 5}%, ${flashL - 10}%, ${flashAlpha * 0.5})`);
-            flashGrad.addColorStop(1, `hsla(${GOLD_CW}, 85%, 60%, 0)`);
-            ctx.fillStyle = flashGrad;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, flashR, 0, Math.PI * 2);
-            ctx.fill();
-          }
-
-          // Neurons explode outward from center
-          const explodeForce = (1 - smoothstep(phase3)) * 0.12;
-          for (const n of neurons) {
-            const dx = n.x - centerX;
-            const dy = n.y - centerY;
-            const dist = Math.sqrt(dx * dx + dy * dy) + 1;
-            n.vx += (dx / dist) * explodeForce * 60;
-            n.vy += (dy / dist) * explodeForce * 60;
-            // Override to golden
-            n.activationSmooth = Math.min(1, n.activationSmooth + (1 - phase3) * 0.08);
-          }
-
-          // Golden star particles filling the screen
-          const starCount = Math.floor(20 * (1 - phase3));
-          for (let si = 0; si < starCount; si++) {
-            const angle = rand(0, Math.PI * 2);
-            const sDist = phase3 * Math.max(W, H) * 0.6 * rand(0.2, 1);
-            const sx = centerX + Math.cos(angle) * sDist;
-            const sy = centerY + Math.sin(angle) * sDist;
-            const starAlpha = (1 - phase3) * rand(0.2, 0.6);
-            const starR = rand(0.5, 2.5);
-            ctx.beginPath();
-            ctx.arc(sx, sy, starR, 0, Math.PI * 2);
-            ctx.fillStyle = `hsla(${GOLD_CW}, 90%, ${isDark ? 80 : 70}%, ${starAlpha})`;
-            ctx.fill();
-          }
-
-          // Settling: gradually return to home positions
-          if (phase3 > 0.5) {
-            const settle = (phase3 - 0.5) / 0.5;
-            for (const n of neurons) {
-              n.vx += (n.homeX - n.x) * settle * 0.01;
-              n.vy += (n.homeY - n.y) * settle * 0.01;
+          // Generate stars once
+          if (newStars.length === 0) {
+            const starCount = 200 + Math.floor(Math.random() * 100);
+            for (let i = 0; i < starCount; i++) {
+              const hues = [45, 45, 45, 0, 0, 200, 200, 280]; // warm golds, whites, soft blues
+              newStars.push({
+                x: Math.random() * W,
+                y: Math.random() * H,
+                size: 0.3 + Math.random() * 0.9,
+                hue: hues[Math.floor(Math.random() * hues.length)],
+                phase: Math.random() * Math.PI * 2,
+                freq: 0.01 + Math.random() * 0.03,
+              });
             }
+          }
+
+          // Render tiny stars with twinkle
+          for (const star of newStars) {
+            const twinkle = (Math.sin(frame * star.freq + star.phase) + 1) * 0.5;
+            const starAlpha = fadeAlpha * (0.3 + twinkle * 0.7);
+            const l = star.hue === 0 ? 95 : (star.hue === 200 ? 75 : 80);
+            const s = star.hue === 0 ? 0 : 60;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${star.hue}, ${s}%, ${l}%, ${starAlpha})`;
+            ctx.fill();
+          }
+
+          // Aurora effect — flowing gradient bands
+          const auroraAlpha = fadeAlpha;
+          for (let a = 0; a < 3; a++) {
+            const auroraY = H * (0.2 + a * 0.25) + Math.sin(frame * 0.003 + a * 2) * 40;
+            const hue = [45, 200, 280][a];
+            const alpha = auroraAlpha * [0.04, 0.03, 0.025][a];
+
+            ctx.beginPath();
+            ctx.moveTo(0, auroraY);
+            ctx.bezierCurveTo(
+              W * 0.25, auroraY + Math.sin(frame * 0.005 + a) * 60,
+              W * 0.75, auroraY - Math.sin(frame * 0.004 + a * 1.5) * 50,
+              W, auroraY + Math.sin(frame * 0.006 + a * 0.7) * 30
+            );
+            ctx.lineTo(W, auroraY + 80);
+            ctx.bezierCurveTo(
+              W * 0.75, auroraY + 80 - Math.sin(frame * 0.004 + a * 1.5) * 40,
+              W * 0.25, auroraY + 80 + Math.sin(frame * 0.005 + a) * 50,
+              0, auroraY + 80
+            );
+            ctx.closePath();
+            ctx.fillStyle = `hsla(${hue}, 60%, 55%, ${alpha})`;
+            ctx.fill();
+          }
+
+          // Suppress normal neuron rendering
+          for (const n of neurons) {
+            n.activationSmooth = 0;
           }
         }
       }
 
-      // ── 포스트 클리어 페이드 ────────────────────────────────────
+      // ── 포스트 클리어: 뉴 유니버스 유지 ──────────────────────────
       if (isClearedRef.current && clearWaveRef.current >= 1) {
+        // Keep rendering new universe (handled by Phase 4 above which runs when cwp > 0.55)
+        // Suppress all normal neurons
         for (const n of neurons) {
-          n.activationSmooth *= 0.97;
-          // Slowly return to home
-          n.vx += (n.homeX - n.x) * 0.008;
-          n.vy += (n.homeY - n.y) * 0.008;
+          n.activationSmooth = 0;
         }
       }
 
