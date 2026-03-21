@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { NeuralNetwork } from './effects/NeuralNetwork';
 import { useNeuralGame } from '@/hooks/useNeuralGame';
+import { useTheme } from '@/components/ThemeProvider';
 
 const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
@@ -23,6 +24,8 @@ const MOO_OFFSET = 89;
 
 export function HeroSection() {
   const t = useTranslations('hero');
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const game = useNeuralGame();
   const sectionRef = useRef<HTMLElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -62,7 +65,7 @@ export function HeroSection() {
 
     const glitchLoop = () => {
       const count = game.activatedCount;
-      if (count === 0 || isClearedAndDone) {
+      if (count === 0 || isClearedAndDone || !isDark) {
         svg.style.transform = '';
         rafId = requestAnimationFrame(glitchLoop);
         return;
@@ -93,22 +96,24 @@ export function HeroSection() {
       cancelAnimationFrame(rafId);
       if (svg) svg.style.transform = '';
     };
-  }, [game.activatedCount, isClearedAndDone]);
+  }, [game.activatedCount, isClearedAndDone, isDark]);
 
   // Logo opacity: dimmer at start, brightens with activations
-  const logoOpacity = isClearedAndDone ? 1 : 0.5 + game.activatedCount * 0.1;
+  const logoOpacity = isDark ? (isClearedAndDone ? 1 : 0.5 + game.activatedCount * 0.1) : 1;
 
   return (
     <section
       ref={sectionRef}
       className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 sm:px-6 text-center overflow-hidden"
     >
-      <NeuralNetwork
-        hiddenNeurons={game.hiddenNeurons}
-        onActivate={game.activate}
-        clearWaveProgress={game.clearWaveProgress}
-        isCleared={game.isCleared}
-      />
+      {isDark && (
+        <NeuralNetwork
+          hiddenNeurons={game.hiddenNeurons}
+          onActivate={game.activate}
+          clearWaveProgress={game.clearWaveProgress}
+          isCleared={game.isCleared}
+        />
+      )}
 
       <div className="relative z-10 flex flex-col items-center gap-4 sm:gap-6 w-full max-w-4xl">
 
@@ -211,7 +216,7 @@ export function HeroSection() {
       </div>
 
       {/* ── 진행 인디케이터 (5 dots) ─────────────────────────────── */}
-      {game.activatedCount > 0 && !game.isCleared && (
+      {isDark && game.activatedCount > 0 && !game.isCleared && (
         <motion.div
           className="absolute bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 flex gap-2"
           initial={{ opacity: 0 }}
