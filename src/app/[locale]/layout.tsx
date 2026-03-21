@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { CursorProvider } from '@/components/effects/CursorProvider';
+import PullCord from '@/components/PullCord';
 import '../globals.css';
 
 const geist = Geist({
@@ -44,6 +45,7 @@ export default async function LocaleLayout({
             <NextIntlClientProvider messages={messages}>
               {children}
             </NextIntlClientProvider>
+            <PullCord />
           </CursorProvider>
         </ThemeProvider>
       </body>
