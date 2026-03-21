@@ -207,6 +207,29 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
     };
     canvas.addEventListener('click', handleClick);
 
+    // 커서가 히든 뉴런 위에 있을 때 pointer로 변경
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const hns = hiddenNeuronsRef.current;
+      if (!hns) { canvas.style.cursor = 'default'; return; }
+
+      let overHidden = false;
+      for (const hn of hns) {
+        if (hn.activated) continue;
+        const dx = hn.x - cx;
+        const dy = hn.y - cy;
+        // 커서 힌트 범위 내에서 pointer 표시 (60px 이내)
+        if (dx * dx + dy * dy < 60 * 60) {
+          overHidden = true;
+          break;
+        }
+      }
+      canvas.style.cursor = overHidden ? 'pointer' : 'default';
+    };
+    canvas.addEventListener('mousemove', handleMouseMove);
+
     const draw = () => {
       const W = canvas.width;
       const H = canvas.height;
@@ -500,79 +523,208 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
       // ── 히든 뉴런 렌더링 ───────────────────────────────────────
       const hns = hiddenNeuronsRef.current;
       if (hns && hns.length > 0) {
-        const hnHue = isDark ? 210 : 45;
+        const GOLD_HUE = 45;
 
-        // 활성화된 뉴런 간 연결선
+        // 활성화된 뉴런 주변 일반 뉴런 상시 환하게
         const activatedHns = hns.filter(hn => hn.activated);
+        const ACTIVATED_AURA_RADIUS = 200;
+        for (const ahn of activatedHns) {
+          for (const n of neurons) {
+            const dx = n.x - ahn.x;
+            const dy = n.y - ahn.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < ACTIVATED_AURA_RADIUS) {
+              const boost = smoothstep(1 - dist / ACTIVATED_AURA_RADIUS) * 0.45;
+              n.activationSmooth = Math.min(1, n.activationSmooth + boost);
+            }
+          }
+        }
+
+        // 활성화된 뉴런 간 연결선 (golden gradient + signal particles)
         if (activatedHns.length > 1) {
-          const connPulse = (Math.sin(frame * 0.015) + 1) * 0.5;
-          const connAlpha = 0.08 + connPulse * 0.06;
-          ctx.strokeStyle = `hsla(${hnHue}, 80%, ${isDark ? 65 : 50}%, ${connAlpha})`;
-          ctx.lineWidth = 0.5;
+          const connPulse = (Math.sin(frame * 0.02) + 1) * 0.5;
+          const connAlpha = 0.12 + connPulse * 0.1;
+          const connWidth = 0.6 + connPulse * 0.6;
+
           for (let i = 0; i < activatedHns.length; i++) {
             for (let j = i + 1; j < activatedHns.length; j++) {
+              const aH = activatedHns[i];
+              const bH = activatedHns[j];
+
+              // Golden gradient line
+              const synGrad = ctx.createLinearGradient(aH.x, aH.y, bH.x, bH.y);
+              synGrad.addColorStop(0, `hsla(${GOLD_HUE}, 90%, ${isDark ? 70 : 60}%, ${connAlpha})`);
+              synGrad.addColorStop(0.5, `hsla(${GOLD_HUE + 5}, 95%, ${isDark ? 80 : 70}%, ${connAlpha * 1.3})`);
+              synGrad.addColorStop(1, `hsla(${GOLD_HUE}, 90%, ${isDark ? 70 : 60}%, ${connAlpha})`);
+              ctx.save();
+              ctx.shadowBlur = 6;
+              ctx.shadowColor = `hsla(${GOLD_HUE}, 90%, 70%, ${connAlpha * 0.5})`;
+              ctx.strokeStyle = synGrad;
+              ctx.lineWidth = connWidth;
               ctx.beginPath();
-              ctx.moveTo(activatedHns[i].x, activatedHns[i].y);
-              ctx.lineTo(activatedHns[j].x, activatedHns[j].y);
+              ctx.moveTo(aH.x, aH.y);
+              ctx.lineTo(bH.x, bH.y);
               ctx.stroke();
+              ctx.restore();
+
+              // Signal particles traveling between activated neurons
+              const sigCount = 2;
+              for (let si = 0; si < sigCount; si++) {
+                const sigProg = ((frame * 0.008 + si * 0.5 + i * 0.3 + j * 0.7) % 1);
+                const sx = lerp(aH.x, bH.x, sigProg);
+                const sy = lerp(aH.y, bH.y, sigProg);
+                const intensity = Math.sin(sigProg * Math.PI);
+                const sigR = 2 + intensity * 1.5;
+                const sigGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, sigR);
+                sigGrad.addColorStop(0, `hsla(${GOLD_HUE}, 95%, 90%, ${0.8 * intensity})`);
+                sigGrad.addColorStop(0.5, `hsla(${GOLD_HUE}, 90%, 75%, ${0.3 * intensity})`);
+                sigGrad.addColorStop(1, `hsla(${GOLD_HUE}, 85%, 65%, 0)`);
+                ctx.fillStyle = sigGrad;
+                ctx.beginPath();
+                ctx.arc(sx, sy, sigR, 0, Math.PI * 2);
+                ctx.fill();
+              }
             }
           }
         }
 
         for (const hn of hns) {
           if (hn.activated) {
-            // 활성화된 히든 뉴런: 부드러운 펄스 글로우
-            const pulse = (Math.sin(frame * 0.015 + hn.id * 1.5) + 1) * 0.5;
-            const coreR = 5 + pulse * 2;
-            const glowR = coreR * 5;
+            // 활성화된 히든 뉴런: premium 3-layer radial glow
+            const p1 = (Math.sin(frame * 0.015 + hn.id * 1.5) + 1) * 0.5;
+            const p2 = (Math.sin(frame * 0.023 + hn.id * 0.8) + 1) * 0.5;
+            const pulse = p1 * 0.7 + p2 * 0.3;
+            const sz = 6 + pulse * 2;
 
-            const grad = ctx.createRadialGradient(hn.x, hn.y, 0, hn.x, hn.y, glowR);
-            grad.addColorStop(0, `hsla(${hnHue}, 80%, ${isDark ? 70 : 60}%, ${0.25 + pulse * 0.15})`);
-            grad.addColorStop(0.4, `hsla(${hnHue}, 80%, ${isDark ? 60 : 50}%, ${0.1 + pulse * 0.05})`);
-            grad.addColorStop(1, `hsla(${hnHue}, 80%, ${isDark ? 55 : 45}%, 0)`);
-            ctx.fillStyle = grad;
+            // Subtle radial light rays
+            ctx.save();
+            ctx.globalAlpha = 0.06 + pulse * 0.04;
+            const rayCount = 12;
+            for (let ri = 0; ri < rayCount; ri++) {
+              const angle = (ri / rayCount) * Math.PI * 2 + frame * 0.003;
+              const rayLen = sz * 6 + Math.sin(frame * 0.01 + ri * 1.2) * sz * 2;
+              ctx.beginPath();
+              ctx.moveTo(hn.x, hn.y);
+              ctx.lineTo(hn.x + Math.cos(angle) * rayLen, hn.y + Math.sin(angle) * rayLen);
+              ctx.strokeStyle = `hsla(${GOLD_HUE}, 90%, ${isDark ? 75 : 65}%, 1)`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+            ctx.restore();
+
+            // Layer 3: outer aura
+            const auraR = sz * 8;
+            const grad3 = ctx.createRadialGradient(hn.x, hn.y, 0, hn.x, hn.y, auraR);
+            grad3.addColorStop(0, `hsla(${GOLD_HUE}, 90%, ${isDark ? 70 : 60}%, ${0.12 + pulse * 0.06})`);
+            grad3.addColorStop(0.4, `hsla(${GOLD_HUE}, 85%, ${isDark ? 60 : 50}%, ${0.04 + pulse * 0.02})`);
+            grad3.addColorStop(1, `hsla(${GOLD_HUE}, 80%, ${isDark ? 55 : 45}%, 0)`);
+            ctx.fillStyle = grad3;
             ctx.beginPath();
-            ctx.arc(hn.x, hn.y, glowR, 0, Math.PI * 2);
+            ctx.arc(hn.x, hn.y, auraR, 0, Math.PI * 2);
             ctx.fill();
 
-            // 밝은 코어
+            // Layer 2: mid halo
+            const haloR = sz * 5;
+            const grad2 = ctx.createRadialGradient(hn.x, hn.y, 0, hn.x, hn.y, haloR);
+            grad2.addColorStop(0, `hsla(${GOLD_HUE}, 92%, ${isDark ? 75 : 65}%, ${0.25 + pulse * 0.12})`);
+            grad2.addColorStop(0.5, `hsla(${GOLD_HUE}, 88%, ${isDark ? 65 : 55}%, ${0.08 + pulse * 0.04})`);
+            grad2.addColorStop(1, `hsla(${GOLD_HUE}, 85%, ${isDark ? 55 : 45}%, 0)`);
+            ctx.fillStyle = grad2;
             ctx.beginPath();
-            ctx.arc(hn.x, hn.y, coreR, 0, Math.PI * 2);
-            ctx.fillStyle = `hsla(${hnHue}, 80%, ${isDark ? 85 : 75}%, ${0.7 + pulse * 0.3})`;
+            ctx.arc(hn.x, hn.y, haloR, 0, Math.PI * 2);
             ctx.fill();
+
+            // Layer 1: bright core glow
+            const coreGlowR = sz * 2.5;
+            const grad1 = ctx.createRadialGradient(hn.x, hn.y, 0, hn.x, hn.y, coreGlowR);
+            grad1.addColorStop(0, `hsla(${GOLD_HUE}, 95%, ${isDark ? 90 : 85}%, ${0.6 + pulse * 0.3})`);
+            grad1.addColorStop(0.4, `hsla(${GOLD_HUE}, 92%, ${isDark ? 80 : 70}%, ${0.3 + pulse * 0.1})`);
+            grad1.addColorStop(1, `hsla(${GOLD_HUE}, 88%, ${isDark ? 65 : 55}%, 0)`);
+            ctx.fillStyle = grad1;
+            ctx.beginPath();
+            ctx.arc(hn.x, hn.y, coreGlowR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Solid core
+            ctx.beginPath();
+            ctx.arc(hn.x, hn.y, sz * 0.8, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${GOLD_HUE}, 95%, ${isDark ? 85 : 75}%, ${0.85 + pulse * 0.15})`;
+            ctx.fill();
+
+            // Inner highlight spot (near-white)
+            ctx.beginPath();
+            ctx.arc(hn.x, hn.y, sz * 0.3, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${GOLD_HUE}, 30%, 96%, ${0.7 + pulse * 0.3})`;
+            ctx.fill();
+
           } else {
-            // 비활성 히든 뉴런: 힌트 시스템
+            // 비활성 히든 뉴런: premium hint system
             let hint = 0;
+            let cursorDist = Infinity;
             if (cursorIn) {
               const dx = hn.x - mx;
               const dy = hn.y - my;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < 120) {
-                hint = smoothstep(1 - dist / 120);
+              cursorDist = Math.sqrt(dx * dx + dy * dy);
+              if (cursorDist < 120) {
+                hint = smoothstep(1 - cursorDist / 120);
               }
             }
 
-            const breath = (Math.sin(frame * 0.008 + hn.id * 2.0) + 1) * 0.5;
-            const baseHint = 0.03 + breath * 0.04;
+            // Multi-wave breathing
+            const breath1 = (Math.sin(frame * 0.008 + hn.id * 2.0) + 1) * 0.5;
+            const breath2 = (Math.sin(frame * 0.013 + hn.id * 1.3) + 1) * 0.5;
+            const breath3 = (Math.sin(frame * 0.005 + hn.id * 3.7) + 1) * 0.5;
+            const breath = breath1 * 0.5 + breath2 * 0.3 + breath3 * 0.2;
+            const baseHint = 0.04 + breath * 0.05;
             const totalHint = Math.max(baseHint, hint);
 
             if (totalHint > 0.01) {
-              const r = 3 + totalHint * 3;
-              const glowR = r * 4;
+              const r = 3 + totalHint * 4;
 
-              const grad = ctx.createRadialGradient(hn.x, hn.y, 0, hn.x, hn.y, glowR);
-              grad.addColorStop(0, `hsla(${hnHue}, 80%, ${isDark ? 65 : 50}%, ${totalHint * 0.3})`);
-              grad.addColorStop(0.5, `hsla(${hnHue}, 80%, ${isDark ? 55 : 45}%, ${totalHint * 0.1})`);
-              grad.addColorStop(1, `hsla(${hnHue}, 80%, ${isDark ? 50 : 40}%, 0)`);
-              ctx.fillStyle = grad;
+              // Outer soft aura
+              const outerR = 20 + totalHint * 12;
+              const gradOuter = ctx.createRadialGradient(hn.x, hn.y, 0, hn.x, hn.y, outerR);
+              gradOuter.addColorStop(0, `hsla(${GOLD_HUE}, 80%, ${isDark ? 65 : 55}%, ${totalHint * 0.15 + breath * 0.03})`);
+              gradOuter.addColorStop(0.5, `hsla(${GOLD_HUE}, 75%, ${isDark ? 55 : 45}%, ${totalHint * 0.05})`);
+              gradOuter.addColorStop(1, `hsla(${GOLD_HUE}, 70%, ${isDark ? 50 : 40}%, 0)`);
+              ctx.fillStyle = gradOuter;
               ctx.beginPath();
-              ctx.arc(hn.x, hn.y, glowR, 0, Math.PI * 2);
+              ctx.arc(hn.x, hn.y, outerR, 0, Math.PI * 2);
               ctx.fill();
 
+              // Inner bright pulse
+              const innerR = r * 2.5;
+              const gradInner = ctx.createRadialGradient(hn.x, hn.y, 0, hn.x, hn.y, innerR);
+              gradInner.addColorStop(0, `hsla(${GOLD_HUE}, 85%, ${isDark ? 75 : 65}%, ${totalHint * 0.4 + breath * 0.08})`);
+              gradInner.addColorStop(0.6, `hsla(${GOLD_HUE}, 80%, ${isDark ? 60 : 50}%, ${totalHint * 0.12})`);
+              gradInner.addColorStop(1, `hsla(${GOLD_HUE}, 75%, ${isDark ? 50 : 40}%, 0)`);
+              ctx.fillStyle = gradInner;
+              ctx.beginPath();
+              ctx.arc(hn.x, hn.y, innerR, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Core dot
               ctx.beginPath();
               ctx.arc(hn.x, hn.y, r, 0, Math.PI * 2);
-              ctx.fillStyle = `hsla(${hnHue}, 80%, ${isDark ? 70 : 55}%, ${totalHint * 0.5})`;
+              ctx.fillStyle = `hsla(${GOLD_HUE}, 85%, ${isDark ? 72 : 62}%, ${totalHint * 0.6 + breath * 0.1})`;
               ctx.fill();
+
+              // Orbiting sparkle dots when cursor is close
+              if (hint > 0.15 && cursorDist < 100) {
+                const orbitCount = 5;
+                const orbitR = r * 3 + hint * 8;
+                for (let oi = 0; oi < orbitCount; oi++) {
+                  const angle = (oi / orbitCount) * Math.PI * 2 + frame * 0.03 + hn.id;
+                  const ox = hn.x + Math.cos(angle) * orbitR;
+                  const oy = hn.y + Math.sin(angle) * orbitR;
+                  const sparkleAlpha = hint * 0.6 * (0.5 + Math.sin(frame * 0.05 + oi * 1.8) * 0.5);
+                  const sparkleR = 0.8 + hint * 1.0;
+                  ctx.beginPath();
+                  ctx.arc(ox, oy, sparkleR, 0, Math.PI * 2);
+                  ctx.fillStyle = `hsla(${GOLD_HUE}, 90%, ${isDark ? 85 : 75}%, ${sparkleAlpha})`;
+                  ctx.fill();
+                }
+              }
             }
           }
         }
@@ -581,69 +733,173 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
       // ── 리플 웨이브 렌더링 & 물리 ──────────────────────────────
       for (let ri = ripples.length - 1; ri >= 0; ri--) {
         const rip = ripples[ri];
-        rip.radius += 4;
+        rip.radius += 6; // faster expansion
         rip.alpha = Math.max(0, 1 - rip.radius / rip.maxRadius);
         if (rip.alpha <= 0) {
           ripples.splice(ri, 1);
           continue;
         }
 
+        ctx.save();
+
+        // Flash effect at origin (bright circle that fades)
+        if (rip.radius < 40) {
+          const flashAlpha = (1 - rip.radius / 40) * 0.5;
+          const flashR = 8 + rip.radius * 0.3;
+          const flashGrad = ctx.createRadialGradient(rip.x, rip.y, 0, rip.x, rip.y, flashR);
+          flashGrad.addColorStop(0, `hsla(45, 90%, 95%, ${flashAlpha})`);
+          flashGrad.addColorStop(0.5, `hsla(45, 85%, 80%, ${flashAlpha * 0.5})`);
+          flashGrad.addColorStop(1, `hsla(45, 80%, 70%, 0)`);
+          ctx.fillStyle = flashGrad;
+          ctx.beginPath();
+          ctx.arc(rip.x, rip.y, flashR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Inner bright ring
+        ctx.shadowBlur = 8 + rip.alpha * 12;
+        ctx.shadowColor = `hsla(45, 90%, 70%, ${rip.alpha * 0.4})`;
         ctx.beginPath();
         ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
-        const ripHue = isDark ? 210 : 45;
-        ctx.strokeStyle = `hsla(${ripHue}, 80%, ${isDark ? 70 : 55}%, ${rip.alpha * 0.3})`;
+        ctx.strokeStyle = `hsla(45, 90%, ${isDark ? 75 : 60}%, ${rip.alpha * 0.4})`;
         ctx.lineWidth = 2 + rip.alpha * 3;
         ctx.stroke();
+
+        // Outer soft ring
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(rip.x, rip.y, rip.radius + 8 + rip.alpha * 6, 0, Math.PI * 2);
+        ctx.strokeStyle = `hsla(45, 80%, ${isDark ? 65 : 50}%, ${rip.alpha * 0.15})`;
+        ctx.lineWidth = 3 + rip.alpha * 4;
+        ctx.stroke();
+
+        ctx.restore();
 
         // 근처 뉴런 부스트
         for (const n of neurons) {
           const dx = n.x - rip.x;
           const dy = n.y - rip.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (Math.abs(dist - rip.radius) < 30) {
-            n.activationSmooth += 0.15;
+          if (Math.abs(dist - rip.radius) < 35) {
+            n.activationSmooth += 0.18;
           }
         }
       }
 
-      // ── 클리어 웨이브 ──────────────────────────────────────────
+      // ── 클리어 웨이브 (3-phase epic sequence) ──────────────────
       const cwp = clearWaveRef.current;
-      if (cwp > 0 && hns && hns.length > 0) {
-        const activatedForWave = hns.filter(hn => hn.activated);
-        const cwHue = isDark ? 210 : 45;
+      const centerX = W / 2;
+      const centerY = H / 2;
 
-        for (let ai = 0; ai < activatedForWave.length; ai++) {
-          const ahn = activatedForWave[ai];
-          const delay = ai * 0.15;
-          const localProgress = Math.max(0, Math.min(1, (cwp - delay) / (1 - delay + 0.001)));
+      if (cwp > 0) {
+        const GOLD_CW = 45;
 
-          if (localProgress > 0) {
-            const waveRadius = localProgress * 300;
-            const waveAlpha = Math.max(0, 1 - localProgress) * 0.4;
+        // Phase 1 (0 → 0.3): Gathering — neurons drift toward center
+        if (cwp <= 0.3) {
+          const phase1 = cwp / 0.3; // 0→1
+          const gatherStrength = smoothstep(phase1) * 0.03;
+          for (const n of neurons) {
+            const dx = centerX - n.x;
+            const dy = centerY - n.y;
+            n.vx += dx * gatherStrength;
+            n.vy += dy * gatherStrength;
+            // Shift color toward gold
+            n.activationSmooth = Math.min(1, n.activationSmooth + phase1 * 0.02);
+          }
 
+          // Synapses brighten as neurons converge
+          if (phase1 > 0.3) {
+            const brightR = Math.max(W, H) * (1 - phase1 * 0.5);
+            const brightGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, brightR);
+            brightGrad.addColorStop(0, `hsla(${GOLD_CW}, 80%, 70%, ${phase1 * 0.04})`);
+            brightGrad.addColorStop(1, `hsla(${GOLD_CW}, 70%, 60%, 0)`);
+            ctx.fillStyle = brightGrad;
             ctx.beginPath();
-            ctx.arc(ahn.x, ahn.y, waveRadius, 0, Math.PI * 2);
-            ctx.strokeStyle = `hsla(${cwHue}, 80%, ${isDark ? 75 : 60}%, ${waveAlpha})`;
-            ctx.lineWidth = 3 + (1 - localProgress) * 4;
-            ctx.stroke();
-
-            // 웨이브 프론트 근처 뉴런 부스트
-            for (const n of neurons) {
-              const dx = n.x - ahn.x;
-              const dy = n.y - ahn.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (Math.abs(dist - waveRadius) < 40) {
-                n.activationSmooth = Math.min(1, n.activationSmooth + 0.1);
-              }
-            }
+            ctx.arc(centerX, centerY, brightR, 0, Math.PI * 2);
+            ctx.fill();
           }
         }
 
-        // 전체 네트워크 글로우 (cwp > 0.8)
-        if (cwp > 0.8) {
-          const fullGlow = (cwp - 0.8) / 0.2;
+        // Phase 2 (0.3 → 0.6): Convergence — neurons accelerate to center, brightness spikes
+        if (cwp > 0.3 && cwp <= 0.6) {
+          const phase2 = (cwp - 0.3) / 0.3; // 0→1
+          const accelStrength = smoothstep(phase2) * 0.08;
           for (const n of neurons) {
-            n.activationSmooth = Math.min(1, n.activationSmooth + fullGlow * 0.05);
+            const dx = centerX - n.x;
+            const dy = centerY - n.y;
+            n.vx += dx * accelStrength;
+            n.vy += dy * accelStrength;
+            n.activationSmooth = Math.min(1, n.activationSmooth + phase2 * 0.05);
+          }
+
+          // Massive glow buildup at center
+          const glowR = 80 + phase2 * 200;
+          const glowAlpha = phase2 * 0.3;
+          const cGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowR);
+          cGrad.addColorStop(0, `hsla(${GOLD_CW}, 95%, ${isDark ? 85 : 80}%, ${glowAlpha})`);
+          cGrad.addColorStop(0.3, `hsla(${GOLD_CW}, 90%, ${isDark ? 75 : 65}%, ${glowAlpha * 0.5})`);
+          cGrad.addColorStop(1, `hsla(${GOLD_CW}, 80%, ${isDark ? 60 : 50}%, 0)`);
+          ctx.fillStyle = cGrad;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, glowR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Phase 3 (0.6 → 1.0): Explosion — flash, scatter outward, golden rain
+        if (cwp > 0.6) {
+          const phase3 = (cwp - 0.6) / 0.4; // 0→1
+
+          // Bright flash at center (white→gold fade)
+          if (phase3 < 0.3) {
+            const flashP = phase3 / 0.3;
+            const flashR = 50 + flashP * 300;
+            const flashAlpha = (1 - flashP) * 0.6;
+            const flashGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, flashR);
+            const flashL = lerp(97, 80, flashP);
+            const flashS = lerp(30, 90, flashP);
+            flashGrad.addColorStop(0, `hsla(${GOLD_CW}, ${flashS}%, ${flashL}%, ${flashAlpha})`);
+            flashGrad.addColorStop(0.3, `hsla(${GOLD_CW}, ${flashS + 5}%, ${flashL - 10}%, ${flashAlpha * 0.5})`);
+            flashGrad.addColorStop(1, `hsla(${GOLD_CW}, 85%, 60%, 0)`);
+            ctx.fillStyle = flashGrad;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, flashR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Neurons explode outward from center
+          const explodeForce = (1 - smoothstep(phase3)) * 0.12;
+          for (const n of neurons) {
+            const dx = n.x - centerX;
+            const dy = n.y - centerY;
+            const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+            n.vx += (dx / dist) * explodeForce * 60;
+            n.vy += (dy / dist) * explodeForce * 60;
+            // Override to golden
+            n.activationSmooth = Math.min(1, n.activationSmooth + (1 - phase3) * 0.08);
+          }
+
+          // Golden star particles filling the screen
+          const starCount = Math.floor(20 * (1 - phase3));
+          for (let si = 0; si < starCount; si++) {
+            const angle = rand(0, Math.PI * 2);
+            const sDist = phase3 * Math.max(W, H) * 0.6 * rand(0.2, 1);
+            const sx = centerX + Math.cos(angle) * sDist;
+            const sy = centerY + Math.sin(angle) * sDist;
+            const starAlpha = (1 - phase3) * rand(0.2, 0.6);
+            const starR = rand(0.5, 2.5);
+            ctx.beginPath();
+            ctx.arc(sx, sy, starR, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${GOLD_CW}, 90%, ${isDark ? 80 : 70}%, ${starAlpha})`;
+            ctx.fill();
+          }
+
+          // Settling: gradually return to home positions
+          if (phase3 > 0.5) {
+            const settle = (phase3 - 0.5) / 0.5;
+            for (const n of neurons) {
+              n.vx += (n.homeX - n.x) * settle * 0.01;
+              n.vy += (n.homeY - n.y) * settle * 0.01;
+            }
           }
         }
       }
@@ -651,7 +907,10 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
       // ── 포스트 클리어 페이드 ────────────────────────────────────
       if (isClearedRef.current && clearWaveRef.current >= 1) {
         for (const n of neurons) {
-          n.activationSmooth *= 0.98;
+          n.activationSmooth *= 0.97;
+          // Slowly return to home
+          n.vx += (n.homeX - n.x) * 0.008;
+          n.vy += (n.homeY - n.y) * 0.008;
         }
       }
 
@@ -662,6 +921,7 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
     return () => {
       cancelAnimationFrame(rafRef.current);
       canvas.removeEventListener('click', handleClick);
+      canvas.removeEventListener('mousemove', handleMouseMove);
       ro.disconnect();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
