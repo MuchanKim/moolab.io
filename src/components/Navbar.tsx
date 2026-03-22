@@ -339,8 +339,6 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.3 }}
         >
-          <DarkModeToggle />
-
           <div className="flex gap-2">
             {langOptions.map(({ short, value }) => (
               <button
@@ -452,7 +450,6 @@ export function Navbar() {
 
           {/* 데스크탑: 우측 컨트롤 */}
           <div className="hidden items-center md:flex" style={{ gap: NAV_CONFIG.rightBar.gap }}>
-            <DarkModeToggle />
             <LanguageSwitcher />
           </div>
 
