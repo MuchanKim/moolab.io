@@ -24,13 +24,19 @@ export interface NeuralGameState {
 
 // ── Zone definitions (ratio 0~1) ───────────────────────
 
-const ZONES: [number, number][] = [
-  [0.15, 0.20], // top-left
-  [0.82, 0.18], // top-right
-  [0.50, 0.55], // center (slightly below to avoid logo)
-  [0.20, 0.82], // bottom-left
-  [0.78, 0.80], // bottom-right
-];
+// 육각형 배치 (중심 0.5, 0.5 기준, 로고 영역 피해서)
+const HEX_CX = 0.5;
+const HEX_CY = 0.5;
+const HEX_RX = 0.42; // 가로 반지름 (화면 전체 활용)
+const HEX_RY = 0.38; // 세로 반지름
+
+const ZONES: [number, number][] = Array.from({ length: 6 }, (_, i) => {
+  const angle = (i * 60 + 30) * (Math.PI / 180); // 30° 오프셋으로 위/아래 꼭짓점
+  return [
+    HEX_CX + HEX_RX * Math.cos(angle),
+    HEX_CY + HEX_RY * Math.sin(angle),
+  ];
+});
 
 function createInitialNeurons(): HiddenNeuron[] {
   return ZONES.map(([zoneX, zoneY], i) => ({
@@ -83,7 +89,7 @@ export function useNeuralGame(): NeuralGameState {
 
     timerRef.current = setTimeout(() => {
       const start = performance.now();
-      const duration = 2500;
+      const duration = 6000; // 블랙홀 흡수 + 폭발 + 새 우주
 
       const step = (now: number) => {
         const elapsed = now - start;
@@ -96,7 +102,7 @@ export function useNeuralGame(): NeuralGameState {
       };
 
       rafRef.current = requestAnimationFrame(step);
-    }, 800);
+    }, 2500); // 하단 UI 축하 애니메이션 후 배경 전환
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);

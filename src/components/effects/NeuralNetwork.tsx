@@ -18,6 +18,10 @@ export interface NeuralNetworkConfig {
   onActivate?: (id: number) => void;
   clearWaveProgress?: number;
   isCleared?: boolean;
+  holdActive?: boolean;
+  onDeath?: () => void;
+  onHoldProgress?: (intensity: number) => void;
+  onHueChange?: (hue: number) => void;
 }
 
 const DEFAULTS: Required<Pick<NeuralNetworkConfig, 'count' | 'linkDistance' | 'cursorRadius' | 'minSize' | 'maxSize' | 'driftSpeed' | 'neuronOpacity' | 'synapseOpacity' | 'burstDelay'>> = {
@@ -78,6 +82,18 @@ interface Ripple {
   alpha: number;
 }
 
+interface BurstSpark {
+  x: number; y: number;
+  vx: number; vy: number;
+  life: number; maxLife: number;
+}
+
+interface Arc {
+  x1: number; y1: number;
+  x2: number; y2: number;
+  life: number; maxLife: number;
+}
+
 function rand(a: number, b: number) { return a + Math.random() * (b - a); }
 function smoothstep(x: number) { return x * x * (3 - 2 * x); }
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
@@ -106,6 +122,10 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
   const onActivateRef = useRef(props.onActivate);
   const clearWaveRef = useRef(props.clearWaveProgress ?? 0);
   const isClearedRef = useRef(props.isCleared ?? false);
+  const holdActiveRef = useRef(props.holdActive ?? false);
+  const onDeathRef = useRef(props.onDeath);
+  const onHoldProgressRef = useRef(props.onHoldProgress);
+  const onHueChangeRef = useRef(props.onHueChange);
 
   useEffect(() => { themeRef.current = theme; }, [theme]);
 
@@ -114,7 +134,11 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
     onActivateRef.current = props.onActivate;
     clearWaveRef.current = props.clearWaveProgress ?? 0;
     isClearedRef.current = props.isCleared ?? false;
-  }, [props.hiddenNeurons, props.onActivate, props.clearWaveProgress, props.isCleared]);
+    holdActiveRef.current = props.holdActive ?? false;
+    onDeathRef.current = props.onDeath;
+    onHoldProgressRef.current = props.onHoldProgress;
+    onHueChangeRef.current = props.onHueChange;
+  }, [props.hiddenNeurons, props.onActivate, props.clearWaveProgress, props.isCleared, props.holdActive, props.onDeath, props.onHoldProgress, props.onHueChange]);
 
   useEffect(() => {
     if (burstDelay > 0) {
@@ -129,8 +153,25 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const MAX_SIGNALS = 25;
+    let MAX_SIGNALS = 25;
     let signalCooldown = 0;
+    const burstSparks: BurstSpark[] = [];
+    const arcs: Arc[] = [];
+    let clearBurstDone = false;
+
+    // 포스트 클리어 인터랙션
+    let hueOffset = 0; // 스크롤로 조절
+    interface RClickConnection {
+      fromIdx: number;
+      toIdxs: number[];
+      life: number;
+      maxLife: number;
+    }
+    const rClickConns: RClickConnection[] = [];
+
+    // 왼클릭 꾹 누르기: 발광 → 소멸
+    let holdStartTime = 0; // 0이면 안 누르는 중
+    let isDead = false; // 10초 후 암흑
 
     const init = (w: number, h: number) => {
       const count = responsiveCount(cfg.count);
@@ -186,7 +227,6 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
     if (canvas.parentElement) ro.observe(canvas.parentElement);
 
     const ripples: Ripple[] = [];
-    let newStars: {x: number; y: number; size: number; hue: number; phase: number; freq: number}[] = [];
 
     const handleClick = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -231,6 +271,81 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
     };
     canvas.addEventListener('mousemove', handleMouseMove);
 
+    // 우클릭: 뉴런 연결 (클리어 후만) + 컨텍스트 메뉴 항상 차단
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      if (!isClearedRef.current || clearWaveRef.current < 1) return;
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const neurons = neuronsRef.current;
+
+      // 가장 가까운 뉴런 찾기
+      let closest = -1;
+      let closestDist = Infinity;
+      for (let i = 0; i < neurons.length; i++) {
+        const dx = neurons[i].x - cx;
+        const dy = neurons[i].y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < closestDist) { closestDist = dist; closest = i; }
+      }
+      if (closest < 0 || closestDist > 80) return;
+
+      // 근처 뉴런들 연결
+      const connectRadius = 200;
+      const toIdxs: number[] = [];
+      const from = neurons[closest];
+      for (let i = 0; i < neurons.length; i++) {
+        if (i === closest) continue;
+        const dx = neurons[i].x - from.x;
+        const dy = neurons[i].y - from.y;
+        if (Math.sqrt(dx * dx + dy * dy) < connectRadius) {
+          toIdxs.push(i);
+        }
+      }
+      if (toIdxs.length === 0) return;
+
+      const life = 180; // 3초 (60fps)
+      rClickConns.push({ fromIdx: closest, toIdxs, life, maxLife: life });
+
+      // 불똥 버스트
+      for (let s = 0; s < 20; s++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.5 + Math.random() * 3;
+        const l = 30 + Math.random() * 30;
+        burstSparks.push({
+          x: from.x, y: from.y,
+          vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+          life: l, maxLife: l,
+        });
+      }
+      // 연결선 위에도 불똥
+      for (const ti of toIdxs) {
+        const to = neurons[ti];
+        for (let s = 0; s < 5; s++) {
+          const t = Math.random();
+          const l = 20 + Math.random() * 20;
+          burstSparks.push({
+            x: from.x + (to.x - from.x) * t,
+            y: from.y + (to.y - from.y) * t,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+            life: l, maxLife: l,
+          });
+        }
+      }
+    };
+    canvas.addEventListener('contextmenu', handleContextMenu);
+
+    // 스크롤: hue 변경 (클리어 후만)
+    const handleWheel = (e: WheelEvent) => {
+      if (!isClearedRef.current || clearWaveRef.current < 1) return;
+      hueOffset = (hueOffset + e.deltaY * 0.3) % 360;
+      if (hueOffset < 0) hueOffset += 360;
+      onHueChangeRef.current?.((45 + hueOffset) % 360);
+    };
+    canvas.addEventListener('wheel', handleWheel, { passive: true });
+
     const draw = () => {
       const W = canvas.width;
       const H = canvas.height;
@@ -252,18 +367,7 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
       const my = cursor.current.y - rect.top;
       const cursorIn = mx > -50 && mx < W + 50 && my > -50 && my < H + 50;
 
-      // ── 블랙홀 중력 (물리 오버라이드) ────────────────────────────
       const cwp = clearWaveRef.current;
-      if (cwp > 0.15 && cwp < 0.55) {
-        const centerX = W / 2;
-        const centerY = H / 2;
-        const pullPhase = Math.min(1, (cwp - 0.15) / 0.3);
-        const pullStrength = 0.01 + pullPhase * 0.12;
-        for (const n of neurons) {
-          n.vx += (centerX - n.x) * pullStrength;
-          n.vy += (centerY - n.y) * pullStrength;
-        }
-      }
 
       // ── 물리 업데이트 ──────────────────────────────────────────
       for (const n of neurons) {
@@ -304,15 +408,16 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
         ctx.fill();
       }
 
-      // ── 시냅스 + 신호 + 뉴런 렌더링 (페이즈 3-4에서 억제) ──────
-      const suppressNormalRendering = cwp >= 0.45;
-
-      if (!suppressNormalRendering) {
       // ── 시냅스 (항상 희미하게 + 커서 근처에서 밝게) ──────────────
       const activeSynapses: [number, number, number][] = []; // [i, j, cursorFade]
       const linkSq = cfg.linkDistance * cfg.linkDistance;
       const cursorRSq = cfg.cursorRadius * cfg.cursorRadius;
-      const BASE_LINE_ALPHA = isDark ? 0.04 : 0.035; // 항상 보이는 기본 연결선
+      const allCleared = isClearedRef.current && cwp >= 1;
+      const goldMode = isClearedRef.current && cwp > 0; // clearWave 시작부터 노란색
+      const goldHue = (45 + hueOffset) % 360;
+      const BASE_LINE_ALPHA = isDark
+        ? (allCleared ? 0.08 : 0.04)
+        : (allCleared ? 0.06 : 0.035);
 
       for (let i = 0; i < neurons.length; i++) {
         const a = neurons[i];
@@ -359,11 +464,11 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
 
           const ca = PALETTE[a.colorIdx];
           const cb = PALETTE[b.colorIdx];
-          const hA = isDark ? ca.darkH : ca.lightH;
-          const sA = isDark ? ca.darkS : ca.lightS;
-          const hB = isDark ? cb.darkH : cb.lightH;
-          const sB = isDark ? cb.darkS : cb.lightS;
-          const lBase = isDark ? 65 : 50;
+          const hA = goldMode ? goldHue : (isDark ? ca.darkH : ca.lightH);
+          const sA = goldMode ? 65 : (isDark ? ca.darkS : ca.lightS);
+          const hB = goldMode ? goldHue : (isDark ? cb.darkH : cb.lightH);
+          const sB = goldMode ? 65 : (isDark ? cb.darkS : cb.lightS);
+          const lBase = isDark ? (goldMode ? 70 : 65) : 50;
 
           // 시냅스 글로우 (커서 가까울 때만)
           if (cursorFade > 0.15) {
@@ -402,25 +507,54 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
       }
 
       // ── 전기 신호 생성 ─────────────────────────────────────────
+      // 홀드 가속: 전기는 1~2초 만에 최고치, 발광은 10초까지 점진적
+      let holdAccel = 0;
+      if (holdStartTime > 0 && !isDead) {
+        const hElapsed = (performance.now() - holdStartTime) / 1000;
+        holdAccel = smoothstep(Math.min(hElapsed / 1.5, 1)); // 1.5초 만에 전기 최고치
+      }
+      const speedMult = 1 + holdAccel * 12; // 최대 13배속
+      MAX_SIGNALS = goldMode ? Math.floor(50 + holdAccel * 500) : 25;
       signalCooldown--;
-      if (signalCooldown <= 0 && activeSynapses.length > 0 && signals.length < MAX_SIGNALS) {
-        // 높은 cursorFade 값의 시냅스에서 우선 생성
-        const sorted = activeSynapses.sort((a, b) => b[2] - a[2]);
-        const pick = sorted[Math.floor(rand(0, Math.min(5, sorted.length)))];
-        signals.push({
-          fromIdx: pick[0],
-          toIdx: pick[1],
-          progress: 0,
-          speed: rand(0.045, 0.1),
-          colorIdx: neurons[pick[0]].colorIdx,
-        });
-        signalCooldown = Math.floor(rand(2, 6));
+
+      // 홀드 중: 모든 시냅스에서 신호 대량 생성
+      const sigGenCount = holdAccel > 0.01 ? Math.floor(3 + holdAccel * 35) : 1;
+      for (let sg = 0; sg < sigGenCount; sg++) {
+        if (signalCooldown > 0 && sg === 0) continue;
+        if (signals.length >= MAX_SIGNALS) break;
+
+        // 홀드 중이면 랜덤 시냅스에서도 생성
+        if (holdAccel > 0.01 && neurons.length > 1) {
+          const i = Math.floor(rand(0, neurons.length));
+          let j = Math.floor(rand(0, neurons.length));
+          if (j === i) j = (j + 1) % neurons.length;
+          const dx = neurons[i].x - neurons[j].x;
+          const dy = neurons[i].y - neurons[j].y;
+          if (Math.sqrt(dx * dx + dy * dy) < cfg.linkDistance) {
+            signals.push({
+              fromIdx: i, toIdx: j, progress: 0,
+              speed: rand(0.06, 0.15) * speedMult,
+              colorIdx: neurons[i].colorIdx,
+            });
+          }
+        } else if (activeSynapses.length > 0) {
+          const sorted = activeSynapses.sort((a, b) => b[2] - a[2]);
+          const pick = sorted[Math.floor(rand(0, Math.min(5, sorted.length)))];
+          signals.push({
+            fromIdx: pick[0], toIdx: pick[1], progress: 0,
+            speed: rand(0.045, 0.1) * speedMult,
+            colorIdx: neurons[pick[0]].colorIdx,
+          });
+        }
+        signalCooldown = goldMode
+          ? Math.max(1, Math.floor(rand(1, 3) / speedMult))
+          : Math.floor(rand(2, 6));
       }
 
       // ── 전기 신호 렌더링 & 업데이트 ───────────────────────────
       for (let si = signals.length - 1; si >= 0; si--) {
         const sig = signals[si];
-        sig.progress += sig.speed;
+        sig.progress += sig.speed * speedMult;
 
         if (sig.progress > 1) {
           signals.splice(si, 1);
@@ -433,33 +567,36 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
         const sy = lerp(a.y, b.y, sig.progress);
 
         const c = PALETTE[sig.colorIdx];
-        const h = isDark ? c.darkH : c.lightH;
-        const s = isDark ? c.darkS : c.lightS;
+        const h = goldMode ? goldHue : (isDark ? c.darkH : c.lightH);
+        const s = goldMode ? 70 : (isDark ? c.darkS : c.lightS);
         const l = isDark ? 80 : 65;
 
         // 신호의 밝기 — 중간에 가장 밝음
         const intensity = Math.sin(sig.progress * Math.PI);
 
-        // 외부 글로우 (작게)
-        const glowR = 3 + intensity * 3;
+        // 외부 글로우 (홀드 시 확대)
+        const holdBoost = 1 + holdAccel * 1.5;
+        const glowR = (3 + intensity * 3) * holdBoost;
         const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, glowR);
-        grad.addColorStop(0, `hsla(${h},${s + 15}%,${l}%,${0.7 * intensity})`);
-        grad.addColorStop(0.5, `hsla(${h},${s + 10}%,${l - 5}%,${0.2 * intensity})`);
+        grad.addColorStop(0, `hsla(${h},${s + 15}%,${l}%,${(0.7 + holdAccel * 0.3) * intensity})`);
+        grad.addColorStop(0.5, `hsla(${h},${s + 10}%,${l - 5}%,${(0.2 + holdAccel * 0.15) * intensity})`);
         grad.addColorStop(1, `hsla(${h},${s}%,${l - 10}%,0)`);
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.arc(sx, sy, glowR, 0, Math.PI * 2);
         ctx.fill();
 
-        // 밝은 코어 (작게)
+        // 밝은 코어
+        const coreR = (0.6 + intensity * 0.6) * holdBoost;
         ctx.beginPath();
-        ctx.arc(sx, sy, 0.6 + intensity * 0.6, 0, Math.PI * 2);
+        ctx.arc(sx, sy, coreR, 0, Math.PI * 2);
         ctx.fillStyle = `hsla(${h},${s + 20}%,${Math.min(95, l + 15)}%,${0.9 * intensity})`;
         ctx.fill();
 
-        // 꼬리 트레일 (짧고 작게)
-        for (let ti = 1; ti <= 2; ti++) {
-          const tp = sig.progress - 0.04 * ti;
+        // 꼬리 트레일 (홀드 시 더 길게)
+        const trailCount = 2 + Math.floor(holdAccel * 3);
+        for (let ti = 1; ti <= trailCount; ti++) {
+          const tp = sig.progress - 0.03 * ti;
           if (tp < 0) continue;
           const tx = lerp(a.x, b.x, tp);
           const ty = lerp(a.y, b.y, tp);
@@ -472,17 +609,18 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
       }
 
       // ── 뉴런 렌더링 ─────────────────────────────────────────────
+      const clearBoost = goldMode ? 0.15 : 0;
       for (const n of neurons) {
         const pulse = (Math.sin(frame * n.pulseFreq + n.pulsePhase) + 1) * 0.5;
         const pf = 0.6 + pulse * 0.4;
         const act = n.activationSmooth;
 
         const c = PALETTE[n.colorIdx];
-        const h = isDark ? c.darkH : c.lightH;
-        const sat = isDark ? c.darkS : c.lightS;
+        const h = goldMode ? goldHue : (isDark ? c.darkH : c.lightH);
+        const sat = goldMode ? 65 : (isDark ? c.darkS : c.lightS);
         const baseL = isDark ? 55 + n.rawL * 20 : 40 + n.rawL * 20;
         const l = baseL + act * 30;
-        const alpha = (cfg.neuronOpacity * pf) + act * 0.7;
+        const alpha = (cfg.neuronOpacity * pf) + act * 0.7 + clearBoost;
         const sz = n.size * (1 + act * 1.5) * (0.8 + pf * 0.2);
 
         // 3중 글로우 (활성화 시)
@@ -537,78 +675,136 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
           ctx.fill();
         }
       }
-      } // end suppressNormalRendering
-
       // ── 히든 뉴런 렌더링 ───────────────────────────────────────
       const hns = hiddenNeuronsRef.current;
       if (hns && hns.length > 0) {
-        const GOLD_HUE = 45;
+        const GOLD_HUE = goldHue;
 
-        // 활성화된 뉴런 주변 일반 뉴런 상시 환하게
+        // 활성화된 뉴런 주변 일반 뉴런이 환하게 빛남 + 연결선 & 전기 신호
         const activatedHns = hns.filter(hn => hn.activated);
-        const ACTIVATED_AURA_RADIUS = 200;
+        const postClear = isClearedRef.current && cwp >= 1;
+        const ACTIVATED_AURA_RADIUS = 400;
+        const CONNECT_RADIUS = 180;
+
         for (const ahn of activatedHns) {
+          // 커서와 이 노란 뉴런 사이의 거리
+          let cursorProximity = 0;
+          if (cursorIn) {
+            const cdx = ahn.x - mx;
+            const cdy = ahn.y - my;
+            const cDist = Math.sqrt(cdx * cdx + cdy * cdy);
+            if (cDist < 250) {
+              cursorProximity = smoothstep(1 - cDist / 250);
+            }
+          }
+
           for (const n of neurons) {
             const dx = n.x - ahn.x;
             const dy = n.y - ahn.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // 넓은 범위 밝기 부스트
             if (dist < ACTIVATED_AURA_RADIUS) {
-              const boost = smoothstep(1 - dist / ACTIVATED_AURA_RADIUS) * 0.45;
+              const baseBoost = postClear ? 0.2 : 0.5;
+              const cursorBoost = postClear ? cursorProximity * 0.4 : 0;
+              const boost = smoothstep(1 - dist / ACTIVATED_AURA_RADIUS) * (baseBoost + cursorBoost);
               n.activationSmooth = Math.min(1, n.activationSmooth + boost);
             }
-          }
-        }
 
-        // 활성화된 뉴런 간 연결선 (golden gradient + signal particles)
-        if (activatedHns.length > 1) {
-          const connPulse = (Math.sin(frame * 0.02) + 1) * 0.5;
-          const connAlpha = 0.12 + connPulse * 0.1;
-          const connWidth = 0.6 + connPulse * 0.6;
+            // 가까운 뉴런과 연결선 (전기 공급 느낌)
+            if (dist < CONNECT_RADIUS && dist > 5) {
+              const linkFade = 1 - dist / CONNECT_RADIUS;
+              const pulse = (Math.sin(frame * 0.02 + dist * 0.01) + 1) * 0.5;
+              const baseAlpha = postClear
+                ? linkFade * (0.12 + pulse * 0.06 + cursorProximity * 0.18)
+                : linkFade * (0.08 + pulse * 0.06);
 
-          for (let i = 0; i < activatedHns.length; i++) {
-            for (let j = i + 1; j < activatedHns.length; j++) {
-              const aH = activatedHns[i];
-              const bH = activatedHns[j];
-
-              // Golden gradient line
-              const synGrad = ctx.createLinearGradient(aH.x, aH.y, bH.x, bH.y);
-              synGrad.addColorStop(0, `hsla(${GOLD_HUE}, 90%, ${isDark ? 70 : 60}%, ${connAlpha})`);
-              synGrad.addColorStop(0.5, `hsla(${GOLD_HUE + 5}, 95%, ${isDark ? 80 : 70}%, ${connAlpha * 1.3})`);
-              synGrad.addColorStop(1, `hsla(${GOLD_HUE}, 90%, ${isDark ? 70 : 60}%, ${connAlpha})`);
-              ctx.save();
-              ctx.shadowBlur = 6;
-              ctx.shadowColor = `hsla(${GOLD_HUE}, 90%, 70%, ${connAlpha * 0.5})`;
-              ctx.strokeStyle = synGrad;
-              ctx.lineWidth = connWidth;
               ctx.beginPath();
-              ctx.moveTo(aH.x, aH.y);
-              ctx.lineTo(bH.x, bH.y);
+              ctx.moveTo(ahn.x, ahn.y);
+              ctx.lineTo(n.x, n.y);
+              ctx.strokeStyle = `hsla(${GOLD_HUE}, 70%, ${isDark ? 65 : 55}%, ${baseAlpha})`;
+              ctx.lineWidth = 0.5 + linkFade * 0.6;
               ctx.stroke();
-              ctx.restore();
 
-              // Signal particles traveling between activated neurons
-              const sigCount = 2;
-              for (let si = 0; si < sigCount; si++) {
-                const sigProg = ((frame * 0.008 + si * 0.5 + i * 0.3 + j * 0.7) % 1);
-                const sx = lerp(aH.x, bH.x, sigProg);
-                const sy = lerp(aH.y, bH.y, sigProg);
-                const intensity = Math.sin(sigProg * Math.PI);
-                const sigR = 2 + intensity * 1.5;
-                const sigGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, sigR);
-                sigGrad.addColorStop(0, `hsla(${GOLD_HUE}, 95%, 90%, ${0.8 * intensity})`);
-                sigGrad.addColorStop(0.5, `hsla(${GOLD_HUE}, 90%, 75%, ${0.3 * intensity})`);
-                sigGrad.addColorStop(1, `hsla(${GOLD_HUE}, 85%, 65%, 0)`);
+              // 전기 신호 파티클 (커서 근처에서 더 빠르게)
+              const speedMult = postClear ? (1 + cursorProximity * 3) : 1;
+              const sigSpeed = (0.012 + linkFade * 0.008) * speedMult;
+              const sigProg = ((frame * sigSpeed + ahn.id * 0.3 + dist * 0.005) % 1);
+              const intensity = Math.sin(sigProg * Math.PI);
+              if (intensity > 0.15) {
+                const sx = lerp(ahn.x, n.x, sigProg);
+                const sy = lerp(ahn.y, n.y, sigProg);
+                const sigR = 1.5 + intensity * 1.2;
+                const sigAlpha = postClear
+                  ? (0.45 + cursorProximity * 0.5) * intensity * linkFade
+                  : 0.5 * intensity * linkFade;
+                const sigGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, sigR * 2.5);
+                sigGrad.addColorStop(0, `hsla(${GOLD_HUE}, 90%, 88%, ${sigAlpha})`);
+                sigGrad.addColorStop(0.4, `hsla(${GOLD_HUE}, 85%, 75%, ${sigAlpha * 0.4})`);
+                sigGrad.addColorStop(1, `hsla(${GOLD_HUE}, 80%, 65%, 0)`);
                 ctx.fillStyle = sigGrad;
                 ctx.beginPath();
-                ctx.arc(sx, sy, sigR, 0, Math.PI * 2);
+                ctx.arc(sx, sy, sigR * 2.5, 0, Math.PI * 2);
                 ctx.fill();
               }
             }
           }
         }
 
+        // 노란 뉴런 페이드 비율 (일반 뉴런과 동시에 전환)
+        const goldFade = (isClearedRef.current && cwp > 0.75)
+          ? smoothstep(Math.min((cwp - 0.75) / 0.25, 1))
+          : 0;
+
         for (const hn of hns) {
           if (hn.activated) {
+            // 페이드 중이거나 완료: 작고 희미한 노란 뉴런으로 전환
+            if (goldFade > 0) {
+              // 커서 근접도 계산 (반짝임용)
+              let cursorGlow = 0;
+              if (cursorIn && goldFade >= 1) {
+                const cdx = hn.x - mx;
+                const cdy = hn.y - my;
+                const cDist = Math.sqrt(cdx * cdx + cdy * cdy);
+                if (cDist < 200) {
+                  cursorGlow = smoothstep(1 - cDist / 200);
+                }
+              }
+
+              const breath = (Math.sin(frame * 0.008 + hn.id * 2.0) + 1) * 0.5;
+              const sparkle = cursorGlow > 0
+                ? (Math.sin(frame * 0.08 + hn.id * 3.1) + 1) * 0.5 * cursorGlow
+                : 0;
+
+              const dimR = 1.8 + breath * 0.5 + sparkle * 2.5;
+              const dimAlpha = 0.18 + breath * 0.06 + sparkle * 0.5;
+
+              // 활성 상태에서 dim 상태로 보간
+              const p1 = (Math.sin(frame * 0.015 + hn.id * 1.5) + 1) * 0.5;
+              const p2 = (Math.sin(frame * 0.023 + hn.id * 0.8) + 1) * 0.5;
+              const pulse = p1 * 0.7 + p2 * 0.3;
+              const fullSz = 6 + pulse * 2;
+
+              const sz = lerp(fullSz, dimR, goldFade);
+              const alpha = lerp(0.85 + pulse * 0.15, dimAlpha, goldFade);
+
+              // Outer glow (페이드에 따라 축소, 커서 근처에서 반짝)
+              const outerR = lerp(fullSz * 5, dimR * 4 + sparkle * 8, goldFade);
+              const outerAlpha = lerp(0.25 + pulse * 0.12, dimAlpha * 0.6 + sparkle * 0.2, goldFade);
+              const gradOuter = ctx.createRadialGradient(hn.x, hn.y, 0, hn.x, hn.y, outerR);
+              gradOuter.addColorStop(0, `hsla(${GOLD_HUE}, ${lerp(92, 40 + sparkle * 40, goldFade)}%, ${isDark ? lerp(75, 60 + sparkle * 15, goldFade) : lerp(65, 50 + sparkle * 15, goldFade)}%, ${outerAlpha})`);
+              gradOuter.addColorStop(1, `hsla(${GOLD_HUE}, 80%, ${isDark ? 55 : 45}%, 0)`);
+              ctx.fillStyle = gradOuter;
+              ctx.beginPath();
+              ctx.arc(hn.x, hn.y, outerR, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Core
+              ctx.beginPath();
+              ctx.arc(hn.x, hn.y, sz * 0.8, 0, Math.PI * 2);
+              ctx.fillStyle = `hsla(${GOLD_HUE}, ${lerp(95, 45 + sparkle * 40, goldFade)}%, ${isDark ? lerp(85, 65 + sparkle * 15, goldFade) : lerp(75, 55 + sparkle * 15, goldFade)}%, ${alpha})`;
+              ctx.fill();
+            } else {
             // 활성화된 히든 뉴런: premium 3-layer radial glow
             const p1 = (Math.sin(frame * 0.015 + hn.id * 1.5) + 1) * 0.5;
             const p2 = (Math.sin(frame * 0.023 + hn.id * 0.8) + 1) * 0.5;
@@ -675,6 +871,7 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
             ctx.arc(hn.x, hn.y, sz * 0.3, 0, Math.PI * 2);
             ctx.fillStyle = `hsla(${GOLD_HUE}, 30%, 96%, ${0.7 + pulse * 0.3})`;
             ctx.fill();
+            }
 
           } else {
             // 비활성 히든 뉴런: premium hint system
@@ -805,181 +1002,334 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
         }
       }
 
-      // ── 클리어 웨이브 (4-phase epic sequence) ──────────────────
-      const centerX = W / 2;
-      const centerY = H / 2;
+      // ── 우클릭 연결 렌더링 ──────────────────────────────────────
+      for (let ci = rClickConns.length - 1; ci >= 0; ci--) {
+        const conn = rClickConns[ci];
+        conn.life--;
+        if (conn.life <= 0) { rClickConns.splice(ci, 1); continue; }
 
-      if (cwp > 0) {
-        const GOLD_CW = 45;
+        const alpha = conn.life / conn.maxLife;
+        const fadeIn = Math.min(1, (conn.maxLife - conn.life) / 15);
+        const intensity = Math.min(fadeIn, alpha);
+        const from = neurons[conn.fromIdx];
 
-        // Phase 1 (0 → 0.15): Ripple Pulse — golden shockwave rings from hidden neurons
-        if (cwp <= 0.15) {
-          const phase1 = cwp / 0.15; // 0→1
-          const hns = hiddenNeuronsRef.current;
-          if (hns) {
-            for (const hn of hns) {
-              if (!hn.activated) continue;
-              const ringR = phase1 * 150;
-              const ringAlpha = (1 - phase1) * 0.4;
-              ctx.save();
-              ctx.shadowBlur = 12;
-              ctx.shadowColor = `hsla(${GOLD_CW}, 90%, 70%, ${ringAlpha * 0.6})`;
+        // 연결된 뉴런 밝기 부스트
+        from.activationSmooth = Math.min(1, from.activationSmooth + intensity * 0.3);
+
+        for (const ti of conn.toIdxs) {
+          const to = neurons[ti];
+          to.activationSmooth = Math.min(1, to.activationSmooth + intensity * 0.15);
+
+          // 희미한 연결선
+          ctx.beginPath();
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
+          ctx.strokeStyle = `hsla(${goldHue}, 60%, 65%, ${intensity * 0.06})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+
+          // 전기 신호 (연결선 위를 이동하는 밝은 파티클)
+          const sigCount = 2 + Math.floor(intensity);
+          for (let si = 0; si < sigCount; si++) {
+            const sigSpeed = 0.015 + si * 0.008;
+            const sigProg = ((frame * sigSpeed + conn.fromIdx * 0.5 + ti * 0.3 + si * 0.33) % 1);
+            const sigInt = Math.sin(sigProg * Math.PI);
+            if (sigInt > 0.15) {
+              const sx = from.x + (to.x - from.x) * sigProg;
+              const sy = from.y + (to.y - from.y) * sigProg;
+              // 지그재그 오프셋
+              const jitter = Math.sin(frame * 0.15 + si * 2) * 3 * intensity;
+              const dx = to.x - from.x;
+              const dy = to.y - from.y;
+              const len = Math.sqrt(dx * dx + dy * dy) || 1;
+              const nx = -dy / len * jitter;
+              const ny = dx / len * jitter;
+
+              const sigR = 2 + sigInt * 2 * intensity;
+              const sg = ctx.createRadialGradient(sx + nx, sy + ny, 0, sx + nx, sy + ny, sigR * 2.5);
+              sg.addColorStop(0, `hsla(${goldHue}, 95%, 90%, ${sigInt * intensity * 0.8})`);
+              sg.addColorStop(0.4, `hsla(${goldHue}, 90%, 75%, ${sigInt * intensity * 0.3})`);
+              sg.addColorStop(1, `hsla(${goldHue}, 80%, 65%, 0)`);
+              ctx.fillStyle = sg;
               ctx.beginPath();
-              ctx.arc(hn.x, hn.y, ringR, 0, Math.PI * 2);
-              ctx.strokeStyle = `hsla(${GOLD_CW}, 90%, 75%, ${ringAlpha})`;
-              ctx.lineWidth = 2 + (1 - phase1) * 3;
-              ctx.stroke();
-              ctx.restore();
+              ctx.arc(sx + nx, sy + ny, sigR * 2.5, 0, Math.PI * 2);
+              ctx.fill();
+
+              // 밝은 코어
+              ctx.beginPath();
+              ctx.arc(sx + nx, sy + ny, sigR * 0.4, 0, Math.PI * 2);
+              ctx.fillStyle = `hsla(${goldHue}, 40%, 95%, ${sigInt * intensity * 0.9})`;
+              ctx.fill();
             }
           }
-          // All neurons pulse brighter
-          for (const n of neurons) {
-            n.activationSmooth = Math.min(1, n.activationSmooth + phase1 * 0.03);
-          }
-        }
 
-        // Phase 2 (0.15 → 0.45): Black Hole Formation
-        if (cwp > 0.15 && cwp <= 0.45) {
-          const phase2 = (cwp - 0.15) / 0.3; // 0→1
-          const bhRadius = phase2 * 80;
-          const bhAlpha = smoothstep(phase2);
-
-          // Dark center
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, bhRadius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(0, 0, 0, ${bhAlpha})`;
-          ctx.fill();
-
-          // Accretion disk (rotating gradient ring)
-          for (let ring = 0; ring < 3; ring++) {
-            const ringR = bhRadius + 10 + ring * 15;
-            const ringAlpha = bhAlpha * (0.3 - ring * 0.08);
-            const rotAngle = frame * 0.02 + ring * 0.5;
+          // 분기 갈래
+          if (Math.random() < 0.3 * intensity) {
+            const bx = from.x + (to.x - from.x) * (0.2 + Math.random() * 0.6);
+            const by = from.y + (to.y - from.y) * (0.2 + Math.random() * 0.6);
             ctx.beginPath();
-            ctx.arc(centerX, centerY, ringR, rotAngle, rotAngle + Math.PI * 1.5);
-            ctx.strokeStyle = `hsla(35, 80%, 60%, ${ringAlpha})`;
-            ctx.lineWidth = 3 - ring * 0.5;
+            ctx.moveTo(bx, by);
+            ctx.lineTo(bx + (Math.random() - 0.5) * 15, by + (Math.random() - 0.5) * 15);
+            ctx.strokeStyle = `hsla(${goldHue}, 85%, 80%, ${intensity * 0.4})`;
+            ctx.lineWidth = 0.4;
             ctx.stroke();
           }
 
-          // Synapses stretch and brighten
-          const brightR = Math.max(W, H) * (1 - phase2 * 0.3);
-          const brightGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, brightR);
-          brightGrad.addColorStop(0, `hsla(${GOLD_CW}, 80%, 70%, ${phase2 * 0.06})`);
-          brightGrad.addColorStop(1, `hsla(${GOLD_CW}, 70%, 60%, 0)`);
-          ctx.fillStyle = brightGrad;
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, brightR, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Brighten neurons
-          for (const n of neurons) {
-            n.activationSmooth = Math.min(1, n.activationSmooth + phase2 * 0.04);
+          // 지속적 불똥 (연결 유지 중)
+          if (conn.life % 3 === 0 && Math.random() < 0.5) {
+            const t = Math.random();
+            const l = 15 + Math.random() * 15;
+            burstSparks.push({
+              x: from.x + (to.x - from.x) * t,
+              y: from.y + (to.y - from.y) * t,
+              vx: (Math.random() - 0.5) * 2,
+              vy: (Math.random() - 0.5) * 2 - 0.5,
+              life: l, maxLife: l,
+            });
           }
         }
 
-        // Phase 3 (0.45 → 0.55): Collapse & Flash
-        if (cwp > 0.45 && cwp <= 0.55) {
-          const phase3 = (cwp - 0.45) / 0.1; // 0→1
-
-          // Massive golden glow at center
-          const glowR = 120 + phase3 * 200;
-          const glowAlpha = (1 - phase3 * 0.5) * 0.5;
-          const cGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowR);
-          cGrad.addColorStop(0, `hsla(${GOLD_CW}, 95%, ${isDark ? 90 : 85}%, ${glowAlpha})`);
-          cGrad.addColorStop(0.3, `hsla(${GOLD_CW}, 90%, ${isDark ? 75 : 65}%, ${glowAlpha * 0.4})`);
-          cGrad.addColorStop(1, `hsla(${GOLD_CW}, 80%, ${isDark ? 60 : 50}%, 0)`);
-          ctx.fillStyle = cGrad;
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, glowR, 0, Math.PI * 2);
-          ctx.fill();
-
-          // WHITE FLASH — peaks at cwp ~0.52 (phase3 ~0.7), fades by cwp 0.55
-          const flashCenter = 0.7;
-          const flashDist = Math.abs(phase3 - flashCenter);
-          const flashAlpha = Math.max(0, 1 - flashDist / 0.3) * 0.9;
-          if (flashAlpha > 0) {
-            ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
-            ctx.fillRect(0, 0, W, H);
-          }
-
-          // Suppress all neurons
-          for (const n of neurons) {
-            n.activationSmooth = 0;
-          }
+        // from 뉴런에서 지속적 스파크
+        if (conn.life % 2 === 0) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 0.3 + Math.random() * 1.5;
+          const l = 15 + Math.random() * 15;
+          burstSparks.push({
+            x: from.x, y: from.y,
+            vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+            life: l, maxLife: l,
+          });
         }
+      }
 
-        // Phase 4 (0.55 → 1.0): New Universe — stars + aurora
-        if (cwp > 0.55) {
-          const phase4 = Math.min(1, (cwp - 0.55) / 0.2); // fade-in 0→1 over 0.55→0.75
-          const fadeAlpha = smoothstep(phase4);
+      // ── 클리어 버스트 불똥 & 아크 렌더링 ─────────────────────────
+      // 불똥
+      for (let si = burstSparks.length - 1; si >= 0; si--) {
+        const s = burstSparks[si];
+        s.x += s.vx; s.y += s.vy;
+        s.vy += 0.03; s.vx *= 0.99;
+        s.life--;
+        if (s.life <= 0) { burstSparks.splice(si, 1); continue; }
+        const a = s.life / s.maxLife;
+        const r = 0.5 + a * 1.2;
+        const sg = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r * 3);
+        sg.addColorStop(0, `hsla(${goldHue}, 90%, 88%, ${a * 0.6})`);
+        sg.addColorStop(1, `hsla(${goldHue}, 80%, 65%, 0)`);
+        ctx.fillStyle = sg;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, r * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${goldHue}, 95%, 92%, ${a * 0.9})`;
+        ctx.fill();
+      }
+      // 아크
+      for (let ai = arcs.length - 1; ai >= 0; ai--) {
+        const arc = arcs[ai];
+        arc.life--;
+        if (arc.life <= 0) { arcs.splice(ai, 1); continue; }
+        const a = arc.life / arc.maxLife;
+        // 매 프레임 랜덤 지그재그
+        const segs = 5 + Math.floor(Math.random() * 4);
+        for (let layer = 0; layer < 2; layer++) {
+          ctx.beginPath();
+          ctx.moveTo(arc.x1, arc.y1);
+          for (let s = 1; s < segs; s++) {
+            const t = s / segs;
+            const jx = (Math.random() - 0.5) * 8;
+            const jy = (Math.random() - 0.5) * 8;
+            ctx.lineTo(
+              arc.x1 + (arc.x2 - arc.x1) * t + jx,
+              arc.y1 + (arc.y2 - arc.y1) * t + jy,
+            );
+          }
+          ctx.lineTo(arc.x2, arc.y2);
+          ctx.strokeStyle = layer === 0
+            ? `hsla(${goldHue}, 90%, 75%, ${a * 0.6})`
+            : `hsla(${goldHue}, 80%, 88%, ${a * 0.25})`;
+          ctx.lineWidth = layer === 0 ? 1.0 : 0.4;
+          ctx.stroke();
+        }
+      }
 
-          // Generate stars once
-          if (newStars.length === 0) {
-            const starCount = 200 + Math.floor(Math.random() * 100);
-            for (let i = 0; i < starCount; i++) {
-              const hues = [45, 45, 45, 0, 0, 200, 200, 280]; // warm golds, whites, soft blues
-              newStars.push({
-                x: Math.random() * W,
-                y: Math.random() * H,
-                size: 0.3 + Math.random() * 0.9,
-                hue: hues[Math.floor(Math.random() * hues.length)],
-                phase: Math.random() * Math.PI * 2,
-                freq: 0.01 + Math.random() * 0.03,
+      // ── 클리어 시퀀스 ──────────────────────────────────────────
+      if (cwp > 0) {
+        // 버스트 이벤트 (1회): 모든 뉴런에서 불똥 + 아크
+        if (!clearBurstDone) {
+          clearBurstDone = true;
+          for (const n of neurons) {
+            // 불똥
+            const count = 3 + Math.floor(Math.random() * 3);
+            for (let s = 0; s < count; s++) {
+              const angle = Math.random() * Math.PI * 2;
+              const speed = 0.5 + Math.random() * 2;
+              const life = 30 + Math.random() * 30;
+              burstSparks.push({
+                x: n.x, y: n.y,
+                vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                life, maxLife: life,
               });
             }
+            // 펄스
+            n.activationSmooth = 1;
           }
-
-          // Render tiny stars with twinkle
-          for (const star of newStars) {
-            const twinkle = (Math.sin(frame * star.freq + star.phase) + 1) * 0.5;
-            const starAlpha = fadeAlpha * (0.3 + twinkle * 0.7);
-            const l = star.hue === 0 ? 95 : (star.hue === 200 ? 75 : 80);
-            const s = star.hue === 0 ? 0 : 60;
-            ctx.beginPath();
-            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-            ctx.fillStyle = `hsla(${star.hue}, ${s}%, ${l}%, ${starAlpha})`;
-            ctx.fill();
+          // 근접 뉴런끼리 아크
+          for (let i = 0; i < neurons.length; i++) {
+            for (let j = i + 1; j < neurons.length; j++) {
+              const dx = neurons[i].x - neurons[j].x;
+              const dy = neurons[i].y - neurons[j].y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < cfg.linkDistance * 0.8 && Math.random() < 0.3) {
+                const life = 20 + Math.floor(Math.random() * 25);
+                arcs.push({
+                  x1: neurons[i].x, y1: neurons[i].y,
+                  x2: neurons[j].x, y2: neurons[j].y,
+                  life, maxLife: life,
+                });
+              }
+            }
           }
+        }
 
-          // Aurora effect — flowing gradient bands
-          const auroraAlpha = fadeAlpha;
-          for (let a = 0; a < 3; a++) {
-            const auroraY = H * (0.2 + a * 0.25) + Math.sin(frame * 0.003 + a * 2) * 40;
-            const hue = [45, 200, 280][a];
-            const alpha = auroraAlpha * [0.04, 0.03, 0.025][a];
-
-            ctx.beginPath();
-            ctx.moveTo(0, auroraY);
-            ctx.bezierCurveTo(
-              W * 0.25, auroraY + Math.sin(frame * 0.005 + a) * 60,
-              W * 0.75, auroraY - Math.sin(frame * 0.004 + a * 1.5) * 50,
-              W, auroraY + Math.sin(frame * 0.006 + a * 0.7) * 30
-            );
-            ctx.lineTo(W, auroraY + 80);
-            ctx.bezierCurveTo(
-              W * 0.75, auroraY + 80 - Math.sin(frame * 0.004 + a * 1.5) * 40,
-              W * 0.25, auroraY + 80 + Math.sin(frame * 0.005 + a) * 50,
-              0, auroraY + 80
-            );
-            ctx.closePath();
-            ctx.fillStyle = `hsla(${hue}, 60%, 55%, ${alpha})`;
-            ctx.fill();
-          }
-
-          // Suppress normal neuron rendering
+        // Phase 1 (0 → 0.25): 전체 연결망 밝게 (모든 뉴런 활성화, 체감되게)
+        if (cwp <= 0.25) {
+          const phase = smoothstep(cwp / 0.25);
           for (const n of neurons) {
-            n.activationSmooth = 0;
+            n.activationSmooth = Math.min(1, n.activationSmooth + phase * 0.35);
+          }
+        }
+
+        // Phase 2 (0.25 → 0.75): 배경 딤 (워드마크+로고 강조)
+        if (cwp > 0.2 && cwp <= 0.8) {
+          let dimAlpha: number;
+          if (cwp <= 0.35) {
+            // 딤 페이드인
+            dimAlpha = smoothstep((cwp - 0.2) / 0.15) * 0.7;
+          } else if (cwp <= 0.65) {
+            // 딤 유지
+            dimAlpha = 0.7;
+          } else {
+            // 딤 페이드아웃
+            dimAlpha = (1 - smoothstep((cwp - 0.65) / 0.15)) * 0.7;
+          }
+          ctx.fillStyle = `rgba(0, 0, 0, ${dimAlpha})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+
+        // Phase 3 (0.75 → 1.0): 배경 복귀, 뉴런 원래 밝기로
+        if (cwp > 0.75) {
+          const fadePhase = smoothstep((cwp - 0.75) / 0.25);
+          for (const n of neurons) {
+            n.activationSmooth *= (1 - fadePhase * 0.85);
           }
         }
       }
 
-      // ── 포스트 클리어: 뉴 유니버스 유지 ──────────────────────────
-      if (isClearedRef.current && clearWaveRef.current >= 1) {
-        // Keep rendering new universe (handled by Phase 4 above which runs when cwp > 0.55)
-        // Suppress all normal neurons
-        for (const n of neurons) {
-          n.activationSmooth = 0;
+      // ── 포스트 클리어: 원래 배경 밝기 유지 ──────────────────────
+      if (isClearedRef.current && cwp >= 1) {
+        // 일반 뉴런은 원래대로 (추가 조정 없음)
+      }
+
+      // ── 왼클릭 꾹 누르기: 발광 → 소멸 ──────────────────────────
+      // holdActiveRef로 시작/종료 감지
+      if (holdActiveRef.current && holdStartTime === 0 && !isDead && allCleared) {
+        holdStartTime = performance.now();
+      } else if (!holdActiveRef.current && holdStartTime > 0) {
+        holdStartTime = 0;
+        onHoldProgressRef.current?.(0);
+      }
+
+      if (isDead) {
+        // 암흑: 모든 것을 검은색으로 덮기
+        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+        ctx.fillRect(0, 0, W, H);
+      } else if (holdStartTime > 0) {
+        const elapsed = (performance.now() - holdStartTime) / 1000;
+        const maxGlow = 10;  // 10초에서 최고치
+        const deathTime = 20; // 20초에서 소멸
+
+        if (elapsed >= deathTime) {
+          isDead = true;
+          holdStartTime = 0;
+          onDeathRef.current?.();
+        } else if (elapsed > 0) {
+          // 발광 강도 (0→10초: 점진적 증가)
+          const glowPhase = Math.min(elapsed / maxGlow, 1);
+          const overdrivePhase = elapsed > maxGlow ? (elapsed - maxGlow) / (deathTime - maxGlow) : 0;
+          const intensity = smoothstep(glowPhase);
+          onHoldProgressRef.current?.(intensity + overdrivePhase);
+
+          // 모든 뉴런 발광
+          for (const n of neurons) {
+            n.activationSmooth = Math.min(1, n.activationSmooth + intensity * 0.6);
+          }
+
+          // 시냅스는 그대로 — 전기 신호 폭주로 연결 시각화
+
+          // 스파크 생성 (5초부터 불꽃놀이 수준)
+          const fireworkPhase = Math.max(0, (elapsed - 3) / 2); // 3초부터 올라가서 5초에 1.0
+          const firework = smoothstep(Math.min(fireworkPhase, 1));
+          const sparkRate = Math.floor(3 + holdAccel * 10 + firework * 25 + overdrivePhase * 50);
+          for (let s = 0; s < sparkRate; s++) {
+            const ni = Math.floor(Math.random() * neurons.length);
+            const n = neurons[ni];
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 0.3 + Math.random() * (1.5 + firework * 3 + overdrivePhase * 5);
+            const life = 20 + Math.random() * (20 + firework * 20 + overdrivePhase * 25);
+            burstSparks.push({
+              x: n.x, y: n.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              life, maxLife: life,
+            });
+          }
+
+          // 뉴런 색상 밝아짐 (lightness 부스트)
+          // goldHue 기반이라 이미 적용됨, activationSmooth로 밝기 증가
+
+          // 오버드라이브: 뉴런 간 아크
+          if (overdrivePhase > 0 && frame % 2 === 0) {
+            const arcCount = Math.floor(1 + overdrivePhase * 8);
+            for (let a = 0; a < arcCount; a++) {
+              const i = Math.floor(Math.random() * neurons.length);
+              const j = Math.floor(Math.random() * neurons.length);
+              if (i === j) continue;
+              const dx = neurons[i].x - neurons[j].x;
+              const dy = neurons[i].y - neurons[j].y;
+              if (Math.sqrt(dx * dx + dy * dy) < cfg.linkDistance * 1.5) {
+                const life = 8 + Math.floor(Math.random() * 12);
+                arcs.push({
+                  x1: neurons[i].x, y1: neurons[i].y,
+                  x2: neurons[j].x, y2: neurons[j].y,
+                  life, maxLife: life,
+                });
+              }
+            }
+          }
+
+          // 오버드라이브: 화면 전체 밝기 증가
+          if (overdrivePhase > 0.2) {
+            const whiteAlpha = (overdrivePhase - 0.2) * 0.3;
+            ctx.fillStyle = `rgba(255, 255, 255, ${whiteAlpha})`;
+            ctx.fillRect(0, 0, W, H);
+          }
+
+          // 소멸 직전: 확 밝아졌다가 → 급격한 암전 (시스템 다운)
+          if (elapsed > 18) {
+            const finalPhase = (elapsed - 18) / 2; // 18~20초
+            if (finalPhase < 0.3) {
+              // 순간 백색 섬광
+              const flashAlpha = Math.sin((finalPhase / 0.3) * Math.PI) * 0.9;
+              ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+              ctx.fillRect(0, 0, W, H);
+            } else {
+              // 급격한 암전
+              const darkPhase = smoothstep((finalPhase - 0.3) / 0.7);
+              ctx.fillStyle = `rgba(0, 0, 0, ${darkPhase})`;
+              ctx.fillRect(0, 0, W, H);
+            }
+          }
         }
       }
 
@@ -991,6 +1341,8 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
       cancelAnimationFrame(rafRef.current);
       canvas.removeEventListener('click', handleClick);
       canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('contextmenu', handleContextMenu);
+      canvas.removeEventListener('wheel', handleWheel);
       ro.disconnect();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
