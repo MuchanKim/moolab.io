@@ -38,7 +38,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className={geist.variable} suppressHydrationWarning>
+    <html lang={locale} className={geist.variable} data-theme="light" suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider>
           <CursorProvider>

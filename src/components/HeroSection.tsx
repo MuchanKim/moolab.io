@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { NeuralNetwork } from './effects/NeuralNetwork';
 import { useNeuralGame } from '@/hooks/useNeuralGame';
 import { useTheme } from '@/components/ThemeProvider';
+import { useNeuronGlow } from '@/contexts/NeuronGlowContext';
 
 const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
@@ -282,6 +283,12 @@ export function HeroSection() {
   // 로고 등장 타이밍: 배경 딤이 시작되면 (cwp > 0.3)
   const showCosmicLogo = isDark && game.isCleared && game.clearWaveProgress > 0.3;
 
+  // Navbar 로고에 glow 상태 전달
+  const { setGlow } = useNeuronGlow();
+  useEffect(() => {
+    setGlow({ hue: neuronHue, active: isClearedAndDone });
+  }, [neuronHue, isClearedAndDone, setGlow]);
+
   // 폭파: 모든 UI 숨기기
   useEffect(() => {
     if (!isDead) return;
@@ -477,15 +484,16 @@ export function HeroSection() {
 function FlashlightOverlay() {
   const overlayRef = useRef<HTMLDivElement>(null);
   const posRef = useRef({ x: -200, y: -200 });
+  const onRef = useRef(false);
 
   useEffect(() => {
     const overlay = overlayRef.current;
     if (!overlay) return;
 
-    const handleMove = (e: MouseEvent) => {
-      posRef.current = { x: e.clientX, y: e.clientY };
+    const applyLight = () => {
+      const { x, y } = posRef.current;
       overlay.style.background = `radial-gradient(
-        circle 160px at ${e.clientX}px ${e.clientY}px,
+        circle 160px at ${x}px ${y}px,
         transparent 0%,
         transparent 30%,
         rgba(0,0,0,0.85) 60%,
@@ -494,15 +502,32 @@ function FlashlightOverlay() {
       )`;
     };
 
-    // 커서가 나가면 완전 암흑
+    const handleMove = (e: MouseEvent) => {
+      posRef.current = { x: e.clientX, y: e.clientY };
+      if (onRef.current) applyLight();
+    };
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.code === 'KeyF') {
+        onRef.current = !onRef.current;
+        if (onRef.current) {
+          applyLight();
+        } else {
+          overlay.style.background = 'black';
+        }
+      }
+    };
+
     const handleLeave = () => {
       overlay.style.background = 'black';
     };
 
     window.addEventListener('mousemove', handleMove);
+    window.addEventListener('keydown', handleKey);
     document.addEventListener('mouseleave', handleLeave);
     return () => {
       window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('keydown', handleKey);
       document.removeEventListener('mouseleave', handleLeave);
     };
   }, []);
