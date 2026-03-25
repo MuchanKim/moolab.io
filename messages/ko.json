@@ -27,7 +27,11 @@
   },
   "apps": {
     "title": "Apps",
-    "subtitle": "MooLab에서 만든 앱들을 만나보세요.",
+    "subtitle": "moolab이 굽고, 당신이 완성합니다.",
+    "subtitleSecondary": "<email>메일</email>과 <community>커뮤니티</community>로 당신의 의견을 들려주세요. 우리는 언제나 열려 있습니다.",
+    "statsTotal": "Total",
+    "statsReleased": "Released",
+    "statsComingSoon": "Coming Soon",
     "explore": "둘러보기",
     "download": "다운로드",
     "viewDetail": "자세히 보기",

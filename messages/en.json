@@ -27,7 +27,11 @@
   },
   "apps": {
     "title": "Apps",
-    "subtitle": "Discover apps made by MooLab.",
+    "subtitle": "Baked by moolab, Seasoned by you.",
+    "subtitleSecondary": "Share your ingredients via <email>Email</email> or <community>Community</community>. We're always open.",
+    "statsTotal": "Total",
+    "statsReleased": "Released",
+    "statsComingSoon": "Coming Soon",
     "explore": "Explore",
     "download": "Download",
     "viewDetail": "View Details",
