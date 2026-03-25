@@ -7,6 +7,8 @@
   --muted: #45474E;
   --border: #e0e0e0;
   --nav-hover: #efefef;
+  --card-bg: #f6f6f8;
+  --card-border: #e4e4e8;
   --dropdown-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
@@ -17,6 +19,8 @@ html[data-theme="dark"] {
   --muted: #f4f4f4;
   --border: #2a2a2a;
   --nav-hover: #27282a;
+  --card-bg: #191a1e;
+  --card-border: #2c2d31;
   --dropdown-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
@@ -27,6 +31,8 @@ html[data-theme="dark"] {
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-nav-hover: var(--nav-hover);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
   --font-sans: var(--font-geist);
 }
 

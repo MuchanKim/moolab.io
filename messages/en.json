@@ -28,12 +28,14 @@
   "apps": {
     "title": "Apps",
     "subtitle": "Discover apps made by MooLab.",
+    "explore": "Explore",
+    "download": "Download",
     "viewDetail": "View Details"
   },
   "snapdock": {
     "name": "SnapDock",
     "subtitle": "A dock launcher, anywhere",
-    "category": "Utilities",
+    "category": "Util",
     "platform": "macOS",
     "description": "SnapDock is a floating dock launcher for macOS. Summon it anywhere on screen with a keyboard shortcut, launch your favorite apps, and it disappears automatically.",
     "instantAccessTitle": "Instant Access",

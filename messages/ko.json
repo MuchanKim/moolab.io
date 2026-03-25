@@ -28,12 +28,14 @@
   "apps": {
     "title": "Apps",
     "subtitle": "MooLab에서 만든 앱들을 만나보세요.",
+    "explore": "둘러보기",
+    "download": "다운로드",
     "viewDetail": "자세히 보기"
   },
   "snapdock": {
     "name": "SnapDock",
     "subtitle": "어디서든 독 런처를",
-    "category": "유틸리티",
+    "category": "Util",
     "platform": "macOS",
     "description": "SnapDock은 macOS용 플로팅 독 런처입니다. 키보드 단축키로 화면 어디서나 독을 불러오고, 앱을 실행하면 자동으로 사라집니다.",
     "instantAccessTitle": "즉시 접근",
