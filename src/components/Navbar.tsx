@@ -73,29 +73,17 @@ const TEXT_PATHS = [
 
 function MoolabLogo() {
   const { theme } = useTheme();
-  const { glow } = useNeuronGlow();
   const textFill = theme === 'dark' ? '#F5F5F5' : '#252525';
-  const leafFill = glow.active
-    ? `hsl(${glow.hue}, 45%, 72%)`
-    : '#6FBB74';
-  const leafFilter = glow.active
-    ? `drop-shadow(0 0 6px hsla(${glow.hue}, 60%, 65%, 0.6)) drop-shadow(0 0 14px hsla(${glow.hue}, 50%, 55%, 0.25))`
-    : 'none';
 
   return (
     <svg
-      width="616" height="173" viewBox="0 0 616 173" fill="none"
-      style={{ height: NAV_CONFIG.logo.height, width: 'auto', cursor: 'pointer' }}
+      width="450" height="112" viewBox="168 30 450 112" fill="none"
+      style={{ height: '22px', width: 'auto', cursor: 'pointer' }}
       aria-label="moolab"
     >
       {TEXT_PATHS.map((d, i) => (
         <path key={i} d={d} fill={textFill} />
       ))}
-      <g style={{ filter: leafFilter, transition: 'filter 0.8s ease' }}>
-        {LEAF_PATHS.map((d, i) => (
-          <path key={i} d={d} fill={leafFill} style={{ transition: 'fill 0.8s ease' }} />
-        ))}
-      </g>
     </svg>
   );
 }
