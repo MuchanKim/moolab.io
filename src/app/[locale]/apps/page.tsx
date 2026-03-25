@@ -274,12 +274,72 @@ export default function AppsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: EASE }}
           >
+            {/* Title */}
             <h1 className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
               {t('title')}
             </h1>
-            <p className="mt-4 text-lg text-muted">
+
+            {/* Subtitle — Main */}
+            <p className="mt-4 text-lg dark:text-[#8b8b99] text-[#6b6b76]">
               {t('subtitle')}
             </p>
+
+            {/* Subtitle — Secondary */}
+            <p className="mt-2 text-sm dark:text-[rgba(255,255,255,0.25)] text-[rgba(0,0,0,0.3)]">
+              {t.rich('subtitleSecondary', {
+                email: (chunks) => (
+                  <a
+                    href="mailto:hello@moolab.com"
+                    className="underline underline-offset-2 dark:text-[rgba(111,187,116,0.6)] text-[rgba(60,140,65,0.8)]"
+                  >
+                    {chunks}
+                  </a>
+                ),
+                community: (chunks) => (
+                  <span className="dark:text-[rgba(111,187,116,0.6)] text-[rgba(60,140,65,0.8)]">
+                    {chunks}
+                  </span>
+                ),
+              })}
+            </p>
+
+            {/* Stats Grid */}
+            <motion.div
+              className="mt-7 flex items-center justify-center gap-8"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: EASE, delay: 0.2 }}
+            >
+              {/* Total */}
+              <div className="text-center">
+                <div className="text-2xl font-bold text-foreground">{totalApps}</div>
+                <div className="mt-1.5 text-xs uppercase tracking-widest dark:text-[rgba(255,255,255,0.35)] text-[rgba(0,0,0,0.35)]">
+                  {t('statsTotal')}
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="h-10 w-px dark:bg-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.08)]" />
+
+              {/* Released */}
+              <div className="text-center">
+                <div className="text-2xl font-bold dark:text-[#6FBB74] text-[#4a9b50]">{releasedApps}</div>
+                <div className="mt-1.5 text-xs uppercase tracking-widest dark:text-[rgba(255,255,255,0.35)] text-[rgba(0,0,0,0.35)]">
+                  {t('statsReleased')}
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="h-10 w-px dark:bg-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.08)]" />
+
+              {/* Coming Soon */}
+              <div className="text-center">
+                <div className="text-2xl font-bold text-foreground">{comingSoonApps}</div>
+                <div className="mt-1.5 text-xs uppercase tracking-widest dark:text-[rgba(255,255,255,0.35)] text-[rgba(0,0,0,0.35)]">
+                  {t('statsComingSoon')}
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
 
           {/* App Grid */}
