@@ -252,6 +252,16 @@ function SnapDockCard({ delay }: { delay: number }) {
 export default function AppsPage() {
   const t = useTranslations('apps');
 
+  const apps = [
+    { name: 'SnapDock', comingSoon: false },
+    { name: 'Gitivity', comingSoon: true },
+    { name: 'SnapDMG', comingSoon: true },
+  ];
+
+  const totalApps = apps.length;
+  const releasedApps = apps.filter(a => !a.comingSoon).length;
+  const comingSoonApps = apps.filter(a => a.comingSoon).length;
+
   return (
     <>
       <Navbar />
