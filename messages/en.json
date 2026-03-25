@@ -66,6 +66,27 @@
     "backToApps": "Back to Apps",
     "copyright": "© 2026 MooLab. All rights reserved."
   },
+  "snapdmg": {
+    "name": "SnapDMG",
+    "subtitle": ".app to DMG, styled your way",
+    "description": "SnapDMG turns your .app files into beautifully styled DMG installers. Drag, drop, customize the background and layout, and export — no terminal needed.",
+    "dragDropTitle": "Drag & Drop",
+    "dragDropBody": "Drop your .app file and SnapDMG handles the rest. No command line required.",
+    "customizeTitle": "Customize Everything",
+    "customizeBody": "Choose background images, icon positions, and window size to match your brand.",
+    "exportTitle": "One-Click Export",
+    "exportBody": "Generate a production-ready DMG with a single click. Ready to distribute.",
+    "lightweightTitle": "Lightweight",
+    "lightweightBody": "Minimal footprint. Does one thing and does it well.",
+    "feature1": "Custom background images",
+    "feature2": "Drag-and-drop .app import",
+    "feature3": "Adjustable icon layout and spacing",
+    "feature4": "One-click DMG generation",
+    "feature5": "Retina-ready output",
+    "feature6": "No code signing required",
+    "featuresTitle": "Features",
+    "backToApps": "Back to Apps"
+  },
   "snapdockPrivacy": {
     "title": "Privacy Policy — SnapDock",
     "lastUpdated": "Last updated: March 24, 2026",

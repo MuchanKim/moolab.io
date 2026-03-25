@@ -66,6 +66,27 @@
     "backToApps": "Apps로 돌아가기",
     "copyright": "© 2026 MooLab. All rights reserved."
   },
+  "snapdmg": {
+    "name": "SnapDMG",
+    "subtitle": ".app을 DMG로, 예쁘게 포장까지",
+    "description": "SnapDMG는 .app 파일을 스타일리시한 DMG 인스톨러로 만들어줍니다. 드래그 앤 드롭으로 배경과 레이아웃을 커스터마이즈하고, 터미널 없이 내보내기.",
+    "dragDropTitle": "드래그 & 드롭",
+    "dragDropBody": ".app 파일을 놓으면 SnapDMG가 알아서 처리합니다. 커맨드 라인 불필요.",
+    "customizeTitle": "모든 것을 커스터마이즈",
+    "customizeBody": "배경 이미지, 아이콘 위치, 윈도우 크기를 브랜드에 맞게 설정하세요.",
+    "exportTitle": "원클릭 내보내기",
+    "exportBody": "클릭 한 번으로 배포용 DMG를 생성합니다. 바로 배포 가능.",
+    "lightweightTitle": "가벼움",
+    "lightweightBody": "최소한의 리소스. 한 가지를 제대로 합니다.",
+    "feature1": "커스텀 배경 이미지",
+    "feature2": "드래그 앤 드롭 .app 가져오기",
+    "feature3": "아이콘 레이아웃 및 간격 조정",
+    "feature4": "원클릭 DMG 생성",
+    "feature5": "레티나 지원 출력",
+    "feature6": "코드 사이닝 불필요",
+    "featuresTitle": "기능",
+    "backToApps": "Apps로 돌아가기"
+  },
   "snapdockPrivacy": {
     "title": "개인정보 처리방침 — SnapDock",
     "lastUpdated": "최종 수정: 2026년 3월 24일",
