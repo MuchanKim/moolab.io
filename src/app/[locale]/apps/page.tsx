@@ -10,6 +10,34 @@ import { useTheme } from '@/components/ThemeProvider';
 
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
+function SlotNumber({ target, delay = 0 }: { target: number; delay?: number }) {
+  const [started, setStarted] = useState(false);
+  const digits = Array.from({ length: 10 }, (_, i) => i);
+
+  return (
+    <span
+      ref={(el) => { if (el && !started) setStarted(true); }}
+      className="inline-flex overflow-hidden"
+      style={{ height: '1em', lineHeight: 1 }}
+    >
+      <motion.span
+        className="flex flex-col items-center"
+        initial={{ y: 0 }}
+        animate={started ? { y: `-${target}em` } : { y: 0 }}
+        transition={{
+          duration: 0.8 + target * 0.1,
+          ease: [0.16, 1, 0.3, 1],
+          delay,
+        }}
+      >
+        {digits.map((d) => (
+          <span key={d} className="block" style={{ height: '1em' }}>{d}</span>
+        ))}
+      </motion.span>
+    </span>
+  );
+}
+
 /* ── Theme-aware card surfaces ── */
 const CARD_THEME = {
   dark: {
@@ -269,78 +297,87 @@ export default function AppsPage() {
         <div className="mx-auto max-w-4xl">
           {/* Hero */}
           <motion.div
-            className="mb-16 text-center"
+            className="mb-16 pt-8 text-center"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: EASE }}
           >
             {/* Title */}
-            <h1 className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
+            <h1 className="text-7xl sm:text-8xl md:text-9xl font-extrabold text-foreground tracking-tighter">
               {t('title')}
             </h1>
 
             {/* Subtitle — Main */}
-            <p className="mt-4 text-lg dark:text-[#8b8b99] text-[#6b6b76]">
+            <p className="mt-5 text-xl sm:text-2xl dark:text-[#cdcdd7] text-[#4a4a5a]">
               {t('subtitle')}
             </p>
 
             {/* Subtitle — Secondary */}
-            <p className="mt-2 text-sm dark:text-[rgba(255,255,255,0.25)] text-[rgba(0,0,0,0.3)]">
+            <p className="mt-2 text-base leading-relaxed dark:text-[#8a8a96] text-[#7a7a8a]">
               {t.rich('subtitleSecondary', {
                 email: (chunks) => (
                   <a
                     href="mailto:hello@moolab.com"
-                    className="underline underline-offset-2 dark:text-[rgba(111,187,116,0.6)] text-[rgba(60,140,65,0.8)]"
+                    className="underline underline-offset-[3px] decoration-current/30 dark:text-inherit text-inherit"
                   >
                     {chunks}
                   </a>
                 ),
                 community: (chunks) => (
-                  <span className="dark:text-[rgba(111,187,116,0.6)] text-[rgba(60,140,65,0.8)]">
+                  <a
+                    href="https://discord.gg/2x7GQg2PVF"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-[3px] decoration-current/30 dark:text-inherit text-inherit"
+                  >
                     {chunks}
-                  </span>
+                  </a>
                 ),
               })}
             </p>
 
-            {/* Stats Grid */}
+            {/* Stats Grid — 좌우 대칭 (1fr auto auto auto 1fr) */}
             <motion.div
-              className="mt-7 flex items-center justify-center gap-8"
+              className="mx-auto mt-10 grid max-w-md items-center"
+              style={{ gridTemplateColumns: '1fr auto auto auto 1fr' }}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: EASE, delay: 0.2 }}
             >
               {/* Total */}
               <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">{totalApps}</div>
-                <div className="mt-1.5 text-xs uppercase tracking-widest dark:text-[rgba(255,255,255,0.35)] text-[rgba(0,0,0,0.35)]">
+                <div className="text-4xl sm:text-5xl font-bold text-foreground"><SlotNumber target={totalApps} delay={0.3} /></div>
+                <div className="mt-2 text-sm uppercase tracking-widest dark:text-[#8a8a96] text-[#7a7a8a]">
                   {t('statsTotal')}
                 </div>
               </div>
 
               {/* Divider */}
-              <div className="h-10 w-px dark:bg-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.08)]" />
+              <div className="mx-6 h-12 w-px dark:bg-[rgba(255,255,255,0.15)] bg-[rgba(0,0,0,0.1)]" />
 
-              {/* Released */}
+              {/* Released (정중앙) */}
               <div className="text-center">
-                <div className="text-2xl font-bold dark:text-[#6FBB74] text-[#4a9b50]">{releasedApps}</div>
-                <div className="mt-1.5 text-xs uppercase tracking-widest dark:text-[rgba(255,255,255,0.35)] text-[rgba(0,0,0,0.35)]">
+                <div className="text-4xl sm:text-5xl font-bold text-foreground"><SlotNumber target={releasedApps} delay={0.5} /></div>
+                <div className="mt-2 text-sm uppercase tracking-widest dark:text-[#8a8a96] text-[#7a7a8a]">
                   {t('statsReleased')}
                 </div>
               </div>
 
               {/* Divider */}
-              <div className="h-10 w-px dark:bg-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.08)]" />
+              <div className="mx-6 h-12 w-px dark:bg-[rgba(255,255,255,0.15)] bg-[rgba(0,0,0,0.1)]" />
 
               {/* Coming Soon */}
               <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">{comingSoonApps}</div>
-                <div className="mt-1.5 text-xs uppercase tracking-widest dark:text-[rgba(255,255,255,0.35)] text-[rgba(0,0,0,0.35)]">
+                <div className="text-4xl sm:text-5xl font-bold text-foreground"><SlotNumber target={comingSoonApps} delay={0.7} /></div>
+                <div className="mt-2 text-sm uppercase tracking-widest dark:text-[#8a8a96] text-[#7a7a8a]">
                   {t('statsComingSoon')}
                 </div>
               </div>
             </motion.div>
           </motion.div>
+
+          {/* Divider */}
+          <div className="mb-12 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
           {/* App Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
