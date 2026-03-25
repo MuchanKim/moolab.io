@@ -247,6 +247,36 @@ function AppCard({
   );
 }
 
+/* ── SnapDMG card (with theme-aware icon) ── */
+function SnapDMGCard({ delay }: { delay: number }) {
+  const t = useTranslations('apps');
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const iconSrc = mounted && theme === 'dark'
+    ? '/apps/snapDMG/appIcon_dark.png'
+    : '/apps/snapDMG/appIcon_default.png';
+
+  return (
+    <AppCard
+      name="SnapDMG"
+      subtitle={t('snapdmgSubtitle')}
+      labels={['macOS', 'Util']}
+      href="/apps/snapdmg"
+      delay={delay}
+      icon={
+        <Image
+          src={iconSrc}
+          alt="SnapDMG"
+          width={128}
+          height={128}
+          className="h-full w-full object-cover"
+        />
+      }
+    />
+  );
+}
+
 /* ── SnapDock card (with theme-aware icon) ── */
 function SnapDockCard({ delay }: { delay: number }) {
   const t = useTranslations('snapdock');
@@ -281,9 +311,9 @@ export default function AppsPage() {
   const t = useTranslations('apps');
 
   const apps = [
+    { name: 'SnapDMG', comingSoon: false },
     { name: 'SnapDock', comingSoon: false },
     { name: 'Gitivity', comingSoon: true },
-    { name: 'SnapDMG', comingSoon: true },
   ];
 
   const totalApps = apps.length;
@@ -379,23 +409,16 @@ export default function AppsPage() {
           {/* Divider */}
           <div className="mb-12 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
-          {/* App Grid */}
+          {/* App Grid — 최신 업데이트 순 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <SnapDockCard delay={0.1} />
+            <SnapDMGCard delay={0.1} />
+
+            <SnapDockCard delay={0.2} />
 
             <AppCard
               name="Gitivity"
               subtitle={t('gitivitySubtitle')}
               labels={["iOS", "Productivity"]}
-              comingSoon
-              delay={0.2}
-              icon={(isDark) => <PlaceholderIcon isDark={isDark} />}
-            />
-
-            <AppCard
-              name="SnapDMG"
-              subtitle={t('snapdmgSubtitle')}
-              labels={["macOS", "Util"]}
               comingSoon
               delay={0.3}
               icon={(isDark) => <PlaceholderIcon isDark={isDark} />}
