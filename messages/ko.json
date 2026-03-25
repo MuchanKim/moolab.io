@@ -30,7 +30,9 @@
     "subtitle": "MooLab에서 만든 앱들을 만나보세요.",
     "explore": "둘러보기",
     "download": "다운로드",
-    "viewDetail": "자세히 보기"
+    "viewDetail": "자세히 보기",
+    "gitivitySubtitle": "GitHub 활동을 AI로 한눈에",
+    "snapdmgSubtitle": ".app을 DMG로, 예쁘게 포장까지"
   },
   "snapdock": {
     "name": "SnapDock",

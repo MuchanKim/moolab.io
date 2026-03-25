@@ -30,7 +30,9 @@
     "subtitle": "Discover apps made by MooLab.",
     "explore": "Explore",
     "download": "Download",
-    "viewDetail": "View Details"
+    "viewDetail": "View Details",
+    "gitivitySubtitle": "GitHub activity, at a glance",
+    "snapdmgSubtitle": ".app to DMG, styled your way"
   },
   "snapdock": {
     "name": "SnapDock",

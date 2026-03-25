@@ -278,7 +278,7 @@ export default function AppsPage() {
 
             <AppCard
               name="Gitivity"
-              subtitle="GitHub activity, at a glance"
+              subtitle={t('gitivitySubtitle')}
               labels={["iOS", "Productivity"]}
               comingSoon
               delay={0.2}
@@ -287,7 +287,7 @@ export default function AppsPage() {
 
             <AppCard
               name="SnapDMG"
-              subtitle=".app to DMG, styled your way"
+              subtitle={t('snapdmgSubtitle')}
               labels={["macOS", "Util"]}
               comingSoon
               delay={0.3}
