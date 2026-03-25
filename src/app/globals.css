@@ -12,6 +12,8 @@
   --card-bg: #f6f6f8;
   --card-border: #e4e4e8;
   --dropdown-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --card-detail-bg: linear-gradient(165deg, #ffffff 0%, #f7f7fa 50%, #f2f2f6 100%);
+  --card-detail-border: rgba(0,0,0,0.05);
 }
 
 html[data-theme="dark"] {
@@ -24,6 +26,8 @@ html[data-theme="dark"] {
   --card-bg: #191a1e;
   --card-border: #2c2d31;
   --dropdown-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --card-detail-bg: linear-gradient(165deg, #1e1f23 0%, #18191d 100%);
+  --card-detail-border: rgba(255,255,255,0.06);
 }
 
 @theme inline {
@@ -87,4 +91,35 @@ html.neural-death header {
   background-color: transparent !important;
   backdrop-filter: none !important;
   border-bottom-color: transparent !important;
+}
+
+/* Icon shine animation — diagonal light sweep */
+@keyframes icon-shine {
+  0% {
+    transform: translateX(-100%) rotate(25deg);
+  }
+  100% {
+    transform: translateX(200%) rotate(25deg);
+  }
+}
+
+.icon-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.icon-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 45%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.15) 55%,
+    transparent 100%
+  );
+  transform: translateX(-100%) rotate(25deg);
+  animation: icon-shine 0.8s ease-out 0.5s forwards;
 }
