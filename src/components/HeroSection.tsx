@@ -20,6 +20,27 @@ const PATHS = {
 };
 
 
+function CountUp({ target, duration = 1.2 }: { target: number; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    if (!started) return;
+    const start = performance.now();
+    let raf: number;
+    const step = (now: number) => {
+      const progress = Math.min((now - start) / (duration * 1000), 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.floor(eased * target));
+      if (progress < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [started, target, duration]);
+
+  return <span ref={(el) => { if (el && !started) setStarted(true); }}>{count}</span>;
+}
+
 const MOO_OFFSET = 89;
 
 // ─── 전기 아크 인디케이터 ────────────────────────────────────────────────────
@@ -455,12 +476,12 @@ export function HeroSection() {
             </svg>
 
             <motion.p
-              className="mt-4 text-[10px] sm:text-xs tracking-[0.22em] uppercase text-muted"
+              className="mt-4 text-lg tracking-[0.03em] text-muted/40 dark:text-[#8b8b99]"
               initial={{ opacity: 0, y: 10 }}
               animate={showEnd ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
               transition={{ duration: 1.0, ease: EASE }}
             >
-              {t('tagline')}
+              {showEnd && <CountUp target={Math.max(1, Math.floor((Date.now() - new Date('2026-03-19').getTime()) / 86400000))} />} days — still baking.
             </motion.p>
           </motion.div>
         </div>
