@@ -16,6 +16,12 @@ export interface FeatureHighlight {
   bodyKey: string;
 }
 
+export interface VersionEntry {
+  version: string;
+  date: string;
+  changes: string[];
+}
+
 export interface AppDetailProps {
   appKey: string;
   iconPath: string;
@@ -29,6 +35,7 @@ export interface AppDetailProps {
   version: string;
   requires: string;
   updatedDate: string;
+  versionHistory?: VersionEntry[];
 }
 
 /* ── Apple logo SVG ── */
@@ -60,17 +67,18 @@ function CategoryBadge({ text }: { text: string }) {
 function FeatureCard({ icon, title, body, delay }: { icon: React.ReactNode; title: string; body: string; delay: number }) {
   return (
     <motion.div
-      className="rounded-xl p-5"
+      className="group/card rounded-xl p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
       style={{
         background: 'var(--card-detail-bg)',
         border: '1px solid var(--card-detail-border)',
       }}
+      whileHover={{ borderColor: 'rgba(255,255,255,0.15)' }}
       initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, ease: EASE, delay }}
     >
-      <div className="mb-3 dark:text-[#8a8a96] text-[#7a7a8a]">{icon}</div>
+      <div className="mb-3 dark:text-[#8a8a96] text-[#7a7a8a] transition-colors duration-300 group-hover/card:dark:text-[#cdcdd7] group-hover/card:text-[#4a4a5a]">{icon}</div>
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       <p className="mt-1.5 text-xs leading-relaxed dark:text-[#8a8a96] text-[#7a7a8a]">{body}</p>
     </motion.div>
@@ -90,11 +98,13 @@ export function AppDetailLayout({
   version,
   requires,
   updatedDate,
+  versionHistory = [],
 }: AppDetailProps) {
   const t = useTranslations(appKey);
   const tFooter = useTranslations('footer');
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'changelog'>('overview');
   useEffect(() => setMounted(true), []);
 
   const isDark = !mounted || theme === 'dark';
@@ -125,102 +135,185 @@ export function AppDetailLayout({
             </Link>
           </motion.div>
 
-          {/* ═══ HERO ═══ */}
+          {/* ═══ HEADER (Raycast style) ═══ */}
           <motion.div
-            className="mt-8 mb-0 text-center"
+            className="mt-8"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: EASE }}
           >
-            {/* Icon with shine */}
-            <div className="relative mx-auto" style={{ width: 96, height: 96 }}>
-              <div className="icon-shine h-full w-full overflow-hidden rounded-[22px]">
-                <Image
-                  src={iconSrc}
-                  alt={t('name')}
-                  width={96}
-                  height={96}
-                  className="h-full w-full object-cover"
-                />
+            <div className="flex items-center gap-5">
+              {/* Icon with shine */}
+              <div className="relative flex-shrink-0" style={{ width: 72, height: 72 }}>
+                <div className="icon-shine h-full w-full overflow-hidden rounded-[18px]">
+                  <Image
+                    src={iconSrc}
+                    alt={t('name')}
+                    width={72}
+                    height={72}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
               </div>
-              {/* Subtle glow */}
-              <div className="absolute -inset-8 -z-10 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.02)_0%,transparent_70%)]" />
-            </div>
 
-            {/* App name */}
-            <h1 className="mt-5 text-5xl font-extrabold text-foreground tracking-tighter">
-              {t('name')}
-            </h1>
-
-            {/* Subtitle */}
-            <p className="mt-3 text-lg dark:text-[#cdcdd7] text-[#4a4a5a]">
-              {t('subtitle')}
-            </p>
-
-            {/* Download CTA */}
-            <div className="mt-6">
-              {downloadUrl ? (
-                <a
-                  href={downloadUrl}
-                  className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-7 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
-                >
-                  ↓ Download
-                </a>
-              ) : (
-                <span className="inline-flex items-center gap-2 rounded-full bg-foreground/30 text-background/50 px-7 py-3 text-sm font-semibold cursor-not-allowed">
-                  ↓ Download
-                </span>
-              )}
+              {/* Title + Subtitle */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+                  {t('name')}
+                </h1>
+                <p className="mt-1 text-sm dark:text-[#cdcdd7] text-[#4a4a5a]">
+                  {t('subtitle')}
+                </p>
+              </div>
             </div>
           </motion.div>
 
           {/* Gradient divider */}
-          <div className="my-10 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          <div className="my-6 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
           {/* ═══ MAIN + SIDEBAR ═══ */}
           <div className="flex flex-col md:flex-row gap-12">
 
             {/* Main content */}
             <div className="flex-1 min-w-0">
-              {/* Description */}
-              <motion.p
-                className="text-sm leading-relaxed dark:text-[#cdcdd7] text-[#4a4a5a]"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: EASE, delay: 0.2 }}
-              >
-                {t('description')}
-              </motion.p>
-
-              {/* Highlights */}
-              <h2 className="mt-10 text-lg font-bold text-foreground">Highlights</h2>
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {highlights.map((h, i) => (
-                  <FeatureCard
-                    key={h.titleKey}
-                    icon={h.icon}
-                    title={t(h.titleKey)}
-                    body={t(h.bodyKey)}
-                    delay={0.1 * i}
-                  />
-                ))}
+              {/* Tab bar */}
+              <div className="flex gap-0 border-b dark:border-[rgba(255,255,255,0.08)] border-[rgba(0,0,0,0.08)]">
+                <button
+                  onClick={() => setActiveTab('overview')}
+                  className={`px-4 py-2.5 text-sm font-medium transition-colors duration-200 -mb-px ${
+                    activeTab === 'overview'
+                      ? 'text-foreground border-b-2 border-foreground'
+                      : 'dark:text-[#8a8a96] text-[#7a7a8a] hover:text-foreground'
+                  }`}
+                >
+                  Overview
+                </button>
+                {versionHistory.length > 0 && (
+                  <button
+                    onClick={() => setActiveTab('changelog')}
+                    className={`px-4 py-2.5 text-sm font-medium transition-colors duration-200 -mb-px ${
+                      activeTab === 'changelog'
+                        ? 'text-foreground border-b-2 border-foreground'
+                        : 'dark:text-[#8a8a96] text-[#7a7a8a] hover:text-foreground'
+                    }`}
+                  >
+                    Changelog
+                  </button>
+                )}
               </div>
 
-              {/* Features list */}
-              <h2 className="mt-10 text-lg font-bold text-foreground">{t('featuresTitle')}</h2>
-              <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {featureKeys.map((key) => (
-                  <li key={key} className="flex items-start gap-2 text-sm dark:text-[#cdcdd7] text-[#4a4a5a]">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full dark:bg-[rgba(255,255,255,0.3)] bg-[rgba(0,0,0,0.2)]" />
-                    {t(key)}
-                  </li>
-                ))}
-              </ul>
+              {/* Tab content */}
+              <div className="mt-6">
+                {activeTab === 'overview' && (
+                  <>
+                    {/* Description */}
+                    <motion.p
+                      className="text-sm leading-relaxed dark:text-[#cdcdd7] text-[#4a4a5a]"
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6, ease: EASE, delay: 0.2 }}
+                    >
+                      {t('description')}
+                    </motion.p>
+
+                    {/* Highlights */}
+                    <h2 className="mt-10 text-lg font-bold text-foreground">Highlights</h2>
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {highlights.map((h, i) => (
+                        <FeatureCard
+                          key={h.titleKey}
+                          icon={h.icon}
+                          title={t(h.titleKey)}
+                          body={t(h.bodyKey)}
+                          delay={0.1 * i}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Features list */}
+                    <h2 className="mt-10 text-lg font-bold text-foreground">{t('featuresTitle')}</h2>
+                    <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {featureKeys.map((key) => (
+                        <li key={key} className="flex items-start gap-2 text-sm dark:text-[#cdcdd7] text-[#4a4a5a]">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full dark:bg-[#60A5FA] bg-[#3b82f6]" />
+                          {t(key)}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+
+                {activeTab === 'changelog' && (
+                  <div>
+                    {/* Version count */}
+                    <div className="flex items-center gap-2 mb-6">
+                      <span className="text-sm dark:text-[#8a8a96] text-[#7a7a8a]">Versions</span>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full dark:bg-[rgba(255,255,255,0.06)] dark:text-[#8a8a96] bg-[rgba(0,0,0,0.06)] text-[#7a7a8a]">
+                        {versionHistory.length}
+                      </span>
+                    </div>
+
+                    {/* Timeline */}
+                    <div className="relative">
+                      {/* Vertical line */}
+                      <div className="absolute left-[11px] top-3 bottom-3 w-px dark:bg-[rgba(255,255,255,0.06)] bg-[rgba(0,0,0,0.08)]" />
+
+                      <div className="space-y-8">
+                        {versionHistory.map((entry) => (
+                          <div key={entry.version} className="relative pl-9">
+                            {/* Timeline dot */}
+                            <div className="absolute left-1.5 top-1.5 w-3 h-3 rounded-full dark:bg-[#111214] bg-[#FFFFFF] border-2 dark:border-[#60A5FA] border-[#3b82f6]" />
+
+                            {/* Version header */}
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-base font-bold text-foreground">{entry.version}</span>
+                              <span className="text-xs dark:text-[#8a8a96] text-[#7a7a8a]">— {entry.date}</span>
+                            </div>
+
+                            {/* Changes */}
+                            <ul className="mt-3 space-y-2">
+                              {entry.changes.map((change, i) => (
+                                <li key={i} className="flex items-start gap-2 text-sm dark:text-[#cdcdd7] text-[#4a4a5a]">
+                                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full dark:bg-[#60A5FA] bg-[#3b82f6]" />
+                                  {change}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Sidebar */}
             <aside className="w-full md:w-[160px] flex-shrink-0">
               <div className="md:sticky md:top-[100px]">
+                {/* Download — Muted + Lucide icon */}
+                {downloadUrl ? (
+                  <a
+                    href={downloadUrl}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold dark:bg-[#2a2b30] dark:text-[rgba(255,255,255,0.85)] bg-[#3a3a42] text-[rgba(255,255,255,0.85)] transition-all duration-200 hover:opacity-85 active:scale-[0.97]"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download
+                  </a>
+                ) : (
+                  <span className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold dark:bg-[#222226] dark:text-[rgba(255,255,255,0.25)] bg-[#e0e0e4] text-[rgba(0,0,0,0.25)] cursor-not-allowed">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download
+                  </span>
+                )}
+
+                {/* Divider */}
+                <div className="my-5 h-px dark:bg-[rgba(255,255,255,0.06)] bg-[rgba(0,0,0,0.08)]" />
+
                 {/* Platform */}
                 <div className="text-[9px] uppercase tracking-widest dark:text-[#8a8a96] text-[#7a7a8a]">Platform</div>
                 <div className="mt-2">

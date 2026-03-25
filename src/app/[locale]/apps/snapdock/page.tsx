@@ -15,6 +15,7 @@ export default function SnapDockPage() {
         { icon: <ShieldCheck size={20} />, titleKey: 'privacyTitle', bodyKey: 'privacyBody' },
       ]}
       featureKeys={['feature1', 'feature2', 'feature3', 'feature4', 'feature5', 'feature6']}
+      downloadUrl="/apps/snapdock/SnapDock_v1.0.0.dmg"
       privacyUrl="/apps/snapdock/privacy"
       supportUrl="/apps/snapdock/support"
       platform="macOS"
@@ -22,6 +23,19 @@ export default function SnapDockPage() {
       version="1.0.0"
       requires="macOS 26 (Tahoe) or later"
       updatedDate="March 2026"
+      versionHistory={[
+        {
+          version: '1.0.0',
+          date: 'March 25, 2026',
+          changes: [
+            'Initial release',
+            'Customizable keyboard shortcut',
+            'Horizontal and vertical dock orientation',
+            'Launch at login support',
+            'Built with Apple Liquid Glass design',
+          ],
+        },
+      ]}
     />
   );
 }

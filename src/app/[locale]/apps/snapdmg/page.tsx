@@ -15,11 +15,25 @@ export default function SnapDMGPage() {
         { icon: <Feather size={20} />, titleKey: 'lightweightTitle', bodyKey: 'lightweightBody' },
       ]}
       featureKeys={['feature1', 'feature2', 'feature3', 'feature4', 'feature5', 'feature6']}
+      downloadUrl="/apps/snapDMG/SnapDMG_v1.0.0.dmg"
       platform="macOS"
       category="Util"
       version="1.0.0"
       requires="macOS 26 (Tahoe) or later"
       updatedDate="March 2026"
+      versionHistory={[
+        {
+          version: '1.0.0',
+          date: 'March 25, 2026',
+          changes: [
+            'Initial release',
+            'Drag-and-drop .app import',
+            'Custom background images',
+            'Adjustable icon layout and spacing',
+            'One-click DMG generation',
+          ],
+        },
+      ]}
     />
   );
 }

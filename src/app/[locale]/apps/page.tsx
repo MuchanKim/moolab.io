@@ -174,11 +174,21 @@ function AppCard({
       {/* Shimmer overlay */}
       <span className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${ct.shimmerBase} opacity-100 transition-opacity duration-500 group-hover:opacity-0`} />
       <span className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${ct.shimmerHover} opacity-0 transition-opacity duration-500 group-hover:opacity-100`} />
+      {/* Hover shine — 얇은 광택 빛줄기, 가운데서 넓어짐 */}
+      <span className="pointer-events-none absolute inset-0 overflow-hidden [&>span]:opacity-0 [&>span]:group-hover:animate-[card-shine_0.8s_ease-in-out_forwards]">
+        <span className="absolute -inset-[50%] bg-[linear-gradient(90deg,transparent_38%,rgba(255,255,255,0.12)_44%,rgba(255,255,255,0.25)_50%,rgba(255,255,255,0.12)_56%,transparent_62%)]" />
+      </span>
 
-      {/* Icon */}
-      <div className="relative mb-5 h-28 w-28 overflow-hidden rounded-[24px] shadow-lg transition-all duration-300 group-hover:scale-105">
-        {typeof icon === 'function' ? icon(isDark) : icon}
-      </div>
+      {/* Icon — clickable if has href */}
+      {href && !comingSoon ? (
+        <Link href={href} className="relative mb-5 h-28 w-28 overflow-hidden rounded-[24px] shadow-lg transition-all duration-300 group-hover:scale-105 block">
+          {typeof icon === 'function' ? icon(isDark) : icon}
+        </Link>
+      ) : (
+        <div className="relative mb-5 h-28 w-28 overflow-hidden rounded-[24px] shadow-lg transition-all duration-300 group-hover:scale-105">
+          {typeof icon === 'function' ? icon(isDark) : icon}
+        </div>
+      )}
 
       {/* Name */}
       <h2 className={`relative text-2xl font-bold tracking-tight ${ct.textPrimary}`}>
