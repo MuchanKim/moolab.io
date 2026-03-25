@@ -45,7 +45,7 @@ export default async function LocaleLayout({
             <NextIntlClientProvider messages={messages}>
               {children}
             </NextIntlClientProvider>
-            <PullCord />
+            {/* PullCord removed — theme toggle moved to Navbar */}
           </CursorProvider>
         </ThemeProvider>
       </body>

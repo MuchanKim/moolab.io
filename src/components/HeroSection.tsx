@@ -476,7 +476,7 @@ export function HeroSection() {
             </svg>
 
             <motion.p
-              className="mt-4 text-lg tracking-[0.03em] text-muted/40 dark:text-[#8b8b99]"
+              className="mt-4 text-lg tracking-[0.03em] text-[#9a9aa6] dark:text-[#8b8b99]"
               initial={{ opacity: 0, y: 10 }}
               animate={showEnd ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
               transition={{ duration: 1.0, ease: EASE }}

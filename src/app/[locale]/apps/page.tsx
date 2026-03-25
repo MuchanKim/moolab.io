@@ -93,7 +93,8 @@ function Tag({ bg, fg, border, children }: { bg: string; fg: string; border: str
 }
 
 function AppLabel({ text, isDark }: { text: string; isDark: boolean }) {
-  if (APPLE_PLATFORMS.has(text)) {
+  const isApple = APPLE_PLATFORMS.has(text) || [...APPLE_PLATFORMS].some(p => text.includes(p));
+  if (isApple) {
     return isDark
       ? <Tag bg="#000000" fg="#ffffff" border="#2a2a2a"><AppleLogo />{text}</Tag>
       : <Tag bg="#ffffff" fg="#000000" border="#d4d4d8"><AppleLogo />{text}</Tag>;
@@ -200,8 +201,8 @@ function AppCard({
         {subtitle}
       </p>
 
-      {/* Labels */}
-      <div className="relative mt-3 flex items-center justify-center gap-2 flex-nowrap">
+      {/* Labels — 멀티플랫폼이면 세로, 아니면 가로 */}
+      <div className={`relative mt-3 flex items-center gap-2 ${visibleLabels.some(l => l.includes('·')) ? 'flex-col' : 'flex-row'}`}>
         {visibleLabels.map((label) =>
           <AppLabel key={label} text={label} isDark={isDark} />
         )}
@@ -219,27 +220,24 @@ function AppCard({
         )}
       </div>
 
-      {/* Action button — pushed to bottom */}
-      <div className="relative mt-auto pt-5">
+      {/* Action button — full-width rounded, pushed to bottom */}
+      <div className="relative mt-auto pt-5 w-full px-2">
         {comingSoon ? (
-          <span
-            className="inline-flex items-center gap-2 rounded-full px-7 py-2.5 text-sm font-semibold cursor-not-allowed"
+          <div
+            className="flex items-center justify-center rounded-xl py-2 text-sm font-semibold cursor-not-allowed"
             style={{
               background: isDark
-                ? 'linear-gradient(145deg, #35363c, #2a2b30, #222226)'
-                : 'linear-gradient(145deg, #e2e2e6, #d8d8dc, #d0d0d4)',
-              boxShadow: isDark
-                ? '0 1px 0 rgba(255,255,255,0.05) inset, 0 2px 6px rgba(0,0,0,0.3)'
-                : '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 6px rgba(0,0,0,0.06)',
-              color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)',
+                ? 'linear-gradient(145deg, #28292e, #222226)'
+                : 'linear-gradient(145deg, #e2e2e6, #d8d8dc)',
+              color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
             }}
           >
             Coming Soon
-          </span>
+          </div>
         ) : (
           <Link
             href={href ?? '/apps'}
-            className={`group/btn relative inline-flex items-center gap-2 rounded-full px-7 py-2.5 text-sm font-semibold ${ct.btnText} transition-all duration-300 hover:shadow-[0_0_24px_rgba(255,255,255,0.06)] active:scale-95 overflow-hidden`}
+            className={`group/btn relative flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-semibold ${ct.btnText} transition-all duration-300 active:scale-[0.98] overflow-hidden`}
             style={{
               background: ct.btnBg,
               boxShadow: ct.btnShadow,
@@ -313,6 +311,31 @@ function SnapDockCard({ delay }: { delay: number }) {
           className="h-full w-full object-cover"
         />
       }
+    />
+  );
+}
+
+/* ── Gitivity card (with theme-aware icon) ── */
+function GitivityCard({ delay }: { delay: number }) {
+  const t = useTranslations('apps');
+
+  return (
+    <AppCard
+      name="Gitivity"
+      subtitle={t('gitivitySubtitle')}
+      labels={['iOS · iPadOS · macOS', 'Productivity']}
+      comingSoon
+      delay={delay}
+      icon={(isDark) => (
+        <Image
+          key={isDark ? 'dark' : 'light'}
+          src={isDark ? '/apps/gitivity/appIcon_dark.png' : '/apps/gitivity/appIcon_default.png'}
+          alt="Gitivity"
+          width={128}
+          height={128}
+          className="h-full w-full object-cover"
+        />
+      )}
     />
   );
 }
@@ -425,14 +448,7 @@ export default function AppsPage() {
 
             <SnapDockCard delay={0.2} />
 
-            <AppCard
-              name="Gitivity"
-              subtitle={t('gitivitySubtitle')}
-              labels={["iOS", "Productivity"]}
-              comingSoon
-              delay={0.3}
-              icon={(isDark) => <PlaceholderIcon isDark={isDark} />}
-            />
+            <GitivityCard delay={0.3} />
           </div>
         </div>
       </main>

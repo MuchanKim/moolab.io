@@ -13,7 +13,7 @@ const NAV_CONFIG = {
     height: '40px',
   },
   link: {
-    fontSize: '17px',
+    fontSize: '15px',
     padding: '7px 20px',
     borderRadius: '9999px',
     transition: 'background-color 0.15s ease, color 0.15s ease',
@@ -141,32 +141,13 @@ function LanguageSwitcher() {
     >
       <button
         onClick={() => setOpen(o => !o)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: NAV_CONFIG.langSwitcher.padding,
-          borderRadius: NAV_CONFIG.langSwitcher.borderRadius,
-          fontSize: NAV_CONFIG.langSwitcher.fontSize,
-          fontWeight: open ? 600 : 400,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          color: open ? 'var(--foreground)' : 'var(--muted)',
-          backgroundColor: open ? 'var(--nav-hover)' : 'transparent',
-          transition: NAV_CONFIG.langSwitcher.transition,
-          cursor: 'pointer',
-        }}
+        aria-label="Switch language"
+        className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase cursor-pointer transition-opacity duration-200 hover:opacity-70 dark:text-[rgba(255,255,255,0.55)] text-[rgba(0,0,0,0.45)]"
       >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
         {options.find((o) => o.value === locale)?.short}
-        <motion.span
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2, ease: 'easeInOut' }}
-          style={{ display: 'flex', alignItems: 'center' }}
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </motion.span>
       </button>
 
       <AnimatePresence>
@@ -295,7 +276,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
-  const { theme } = useTheme();
+  const { theme, toggle } = useTheme();
 
   const langOptions = [
     { short: 'KO', label: '한국어', value: 'ko' },
@@ -377,6 +358,23 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
+
+          {/* 테마 토글 */}
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="flex items-center justify-center cursor-pointer transition-opacity duration-200 hover:opacity-70"
+          >
+            {theme === 'dark' ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)" stroke="none">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(0,0,0,0.45)" stroke="none">
+                <circle cx="12" cy="12" r="5"/><rect x="11" y="0.5" width="2" height="3" rx="1"/><rect x="11" y="20.5" width="2" height="3" rx="1"/><rect x="3.4" y="3.93" width="2" height="3" rx="1" transform="rotate(-45 4.4 5.43)"/><rect x="17.53" y="18.07" width="2" height="3" rx="1" transform="rotate(-45 18.53 19.57)"/><rect x="0.5" y="11" width="3" height="2" rx="1"/><rect x="20.5" y="11" width="3" height="2" rx="1"/><rect x="3.93" y="17.53" width="3" height="2" rx="1" transform="rotate(-45 5.43 18.53)"/><rect x="18.07" y="3.4" width="3" height="2" rx="1" transform="rotate(-45 19.57 4.4)"/>
+              </svg>
+            )}
+          </button>
         </motion.div>
       </motion.nav>
     </motion.div>
@@ -396,7 +394,7 @@ export function Navbar() {
   const [hidden, setHidden] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const prevScrollY = useRef(0);
-  const { theme } = useTheme();
+  const { theme, toggle } = useTheme();
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
@@ -459,20 +457,39 @@ export function Navbar() {
             <MoolabLogo />
           </a>
 
-          {/* 데스크탑: 중앙 탭 */}
-          <ul className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 md:flex">
-            {NAV_LINKS.map(({ label, href }) => (
-              <li key={label}>
-                <NavLink href={href}>
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-
-          {/* 데스크탑: 우측 컨트롤 */}
+          {/* 데스크탑: 우측 (탭 + 구분선 + 언어 + 테마) */}
           <div className="hidden items-center md:flex" style={{ gap: NAV_CONFIG.rightBar.gap }}>
+            <ul className="flex items-center gap-6">
+              {NAV_LINKS.map(({ label, href }) => (
+                <li key={label}>
+                  <NavLink href={href}>
+                    {label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+
+            {/* 구분선 — 넓은 간격 + 진하게 */}
+            <div className="h-5 w-px dark:bg-[rgba(255,255,255,0.15)] bg-[rgba(0,0,0,0.12)] mx-3" />
+
             <LanguageSwitcher />
+
+            {/* 테마 토글 — naked icon */}
+            <button
+              onClick={toggle}
+              aria-label="Toggle theme"
+              className="flex items-center justify-center cursor-pointer transition-opacity duration-200 hover:opacity-70"
+            >
+              {theme === 'dark' ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)" stroke="none">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(0,0,0,0.45)" stroke="none">
+                  <circle cx="12" cy="12" r="5"/><rect x="11" y="0.5" width="2" height="3" rx="1"/><rect x="11" y="20.5" width="2" height="3" rx="1"/><rect x="3.4" y="3.93" width="2" height="3" rx="1" transform="rotate(-45 4.4 5.43)"/><rect x="17.53" y="18.07" width="2" height="3" rx="1" transform="rotate(-45 18.53 19.57)"/><rect x="0.5" y="11" width="3" height="2" rx="1"/><rect x="20.5" y="11" width="3" height="2" rx="1"/><rect x="3.93" y="17.53" width="3" height="2" rx="1" transform="rotate(-45 5.43 18.53)"/><rect x="18.07" y="3.4" width="3" height="2" rx="1" transform="rotate(-45 19.57 4.4)"/>
+                </svg>
+              )}
+            </button>
           </div>
 
           {/* 모바일: 햄버거 버튼 */}
