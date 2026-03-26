@@ -16,9 +16,21 @@ const geist = Geist({
 
 export const metadata: Metadata = {
   title: 'Moolab',
-  description: 'A personal studio for apps, ideas, and experiments.',
+  description: 'Probably building something right now.',
   icons: {
     icon: '/icon.svg',
+  },
+  openGraph: {
+    title: 'Moolab',
+    description: 'Probably building something right now.',
+    images: [{ url: '/og-image.jpg', width: 1200, height: 630 }],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Moolab',
+    description: 'Probably building something right now.',
+    images: ['/og-image.jpg'],
   },
 };
 
