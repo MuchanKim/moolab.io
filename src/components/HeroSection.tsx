@@ -298,8 +298,11 @@ export function HeroSection() {
   const [showEnd, setShowEnd] = useState(false);
   const [holdActive, setHoldActive] = useState(false);
   const [holdIntensity, setHoldIntensity] = useState(0);
+  const [holdElapsed, setHoldElapsed] = useState(0);
   const [isDead, setIsDead] = useState(false);
   const [neuronHue, setNeuronHue] = useState(45);
+  const holdStartRef = useRef(0);
+  const holdRafRef = useRef(0);
 
   const isClearedAndDone = game.isCleared && game.clearWaveProgress >= 1;
   // 로고 등장 타이밍: 배경 딤이 시작되면 (cwp > 0.3)
@@ -311,12 +314,42 @@ export function HeroSection() {
     setGlow({ hue: neuronHue, active: isClearedAndDone });
   }, [neuronHue, isClearedAndDone, setGlow]);
 
-  // 폭파: 모든 UI 숨기기
+  // holdElapsed: 누적 누른 시간 (놓아도 유지, 10초 넘으면 자동 진행)
+  const totalHoldRef = useRef(0);
+  const lastTickRef = useRef(0);
+  const runawayActiveRef = useRef(false);
   useEffect(() => {
-    if (!isDead) return;
+    const shouldTick = isClearedAndDone && isDark &&
+      (holdActive || runawayActiveRef.current);
+
+    if (shouldTick) {
+      lastTickRef.current = performance.now();
+      const tick = () => {
+        const now = performance.now();
+        const dt = (now - lastTickRef.current) / 1000;
+        lastTickRef.current = now;
+        if (holdActive || runawayActiveRef.current) {
+          totalHoldRef.current += dt;
+        }
+        if (totalHoldRef.current >= 10) {
+          runawayActiveRef.current = true; // 10초 넘으면 자동 진행
+        }
+        setHoldElapsed(totalHoldRef.current);
+        holdRafRef.current = requestAnimationFrame(tick);
+      };
+      holdRafRef.current = requestAnimationFrame(tick);
+    } else {
+      cancelAnimationFrame(holdRafRef.current);
+    }
+    return () => cancelAnimationFrame(holdRafRef.current);
+  }, [holdActive, isClearedAndDone, isDark, isDead]);
+
+  // 폭파: 모든 UI 숨기기 (라이트모드만, 다크모드는 Starfield가 처리)
+  useEffect(() => {
+    if (!isDead || isDark) return;
     document.documentElement.classList.add('neural-death');
     return () => { document.documentElement.classList.remove('neural-death'); };
-  }, [isDead]);
+  }, [isDead, isDark]);
 
   // 마운트 즉시 워드마크 시퀀스 시작
   useEffect(() => {
@@ -381,8 +414,11 @@ export function HeroSection() {
     };
   }, [game.activatedCount, isClearedAndDone, isDark]);
 
-  // 워드마크: 항상 흰색(1)
-  const wordmarkOpacity = 1;
+  // 워드마크 opacity: 10초 미만 유지, 10초 이후(폭주) 서서히 사라짐
+  const isRunaway = holdElapsed >= 10;
+  const runawayAge = isRunaway ? holdElapsed - 10 : 0;
+  const logoFade = isRunaway ? Math.min(1, runawayAge / 4) : 0; // 4초에 걸쳐 사라짐
+  const wordmarkOpacity = isDark && isRunaway ? Math.max(0, 1 - logoFade * logoFade) : 1;
 
   return (
     <>
@@ -396,7 +432,15 @@ export function HeroSection() {
     >
       {isDark && (
         <>
-          <Starfield count={3000} opacity={game.isCleared ? 1 : 0.5} />
+          <Starfield count={3000} opacity={game.isCleared ? 1 : 0.5} holdElapsed={holdElapsed}
+            onHoldDeath={() => setIsDead(true)}
+            onRebirth={() => {
+              setIsDead(false);
+              setHoldElapsed(0);
+              totalHoldRef.current = 0;
+              runawayActiveRef.current = false;
+            }}
+          />
           <NeuralNetwork
             count={80}
             linkDistance={120}
@@ -490,8 +534,8 @@ export function HeroSection() {
             <motion.p
               className="mt-4 text-lg tracking-[0.03em] text-[#9a9aa6] dark:text-[#8b8b99]"
               initial={{ opacity: 0, y: 10 }}
-              animate={showEnd ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
-              transition={{ duration: 1.0, ease: EASE }}
+              animate={showEnd ? { opacity: wordmarkOpacity, y: 0 } : { opacity: 0, y: 10 }}
+              transition={{ duration: holdElapsed > 0 ? 0.05 : 1.0, ease: EASE }}
             >
               {showEnd && <CountUp target={Math.max(1, Math.floor((Date.now() - new Date('2026-03-19').getTime()) / 86400000))} />} days — still baking.
             </motion.p>
@@ -507,7 +551,7 @@ export function HeroSection() {
     </section>
 
     {/* ── 후레쉬 오버레이 (폭파 후, section 밖) ────────────────────── */}
-    {isDead && <FlashlightOverlay />}
+    {isDead && !isDark && <FlashlightOverlay />}
     </>
   );
 }

@@ -1148,7 +1148,14 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
       }
 
       // ── 왼클릭 꾹 누르기: 발광 → 소멸 ──────────────────────────
-      // holdActiveRef로 시작/종료 감지
+      // 다크모드: Starfield가 hold 시퀀스를 처리하므로 여기서는 스킵
+      if (isDark) {
+        if (isDead) {
+          ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+          ctx.fillRect(0, 0, W, H);
+        }
+      } else {
+      // holdActiveRef로 시작/종료 감지 (라이트모드)
       if (holdActiveRef.current && holdStartTime === 0 && !isDead && allCleared) {
         holdStartTime = performance.now();
       } else if (!holdActiveRef.current && holdStartTime > 0) {
@@ -1248,6 +1255,7 @@ export function NeuralNetwork(props: NeuralNetworkConfig) {
           }
         }
       }
+      } // isDark else 닫기
 
       rafRef.current = requestAnimationFrame(draw);
     };
