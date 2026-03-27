@@ -90,6 +90,17 @@ function AppCard({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: EASE, delay }}
       >
+        {/* Coming Soon corner badge */}
+        {comingSoon && (
+          <span className={`absolute top-4 right-5 text-[10px] font-semibold tracking-[0.05em] px-2.5 py-1 rounded-full ${
+            isDark
+              ? 'bg-[rgba(255,180,60,0.1)] text-[rgba(255,180,60,0.5)] border border-[rgba(255,180,60,0.15)]'
+              : 'bg-[rgba(180,120,20,0.1)] text-[rgba(160,100,10,0.75)] border border-[rgba(180,120,20,0.18)]'
+          }`}>
+            Coming Soon
+          </span>
+        )}
+
         {/* Top: Icon + Name/Subtitle */}
         <div className="flex items-center gap-4">
           <div className={`w-14 h-14 rounded-[14px] overflow-hidden flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${
@@ -98,18 +109,7 @@ function AppCard({
             <Image src={iconSrc} alt={name} width={56} height={56} className="h-full w-full object-cover" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="flex items-center text-[17px] font-semibold text-foreground">
-              {name}
-              {comingSoon && (
-                <span className={`ml-2 text-[9px] font-semibold tracking-[0.05em] px-2 py-0.5 rounded ${
-                  isDark
-                    ? 'bg-[rgba(255,180,60,0.1)] text-[rgba(255,180,60,0.5)] border border-[rgba(255,180,60,0.15)]'
-                    : 'bg-[rgba(180,120,20,0.1)] text-[rgba(160,100,10,0.75)] border border-[rgba(180,120,20,0.18)]'
-                }`}>
-                  Coming Soon
-                </span>
-              )}
-            </h2>
+            <h2 className="text-[17px] font-semibold text-foreground">{name}</h2>
             <p className={`text-xs mt-1 ${isDark ? 'text-[rgba(255,255,255,0.35)]' : 'text-[rgba(0,0,0,0.4)]'}`}>
               {subtitle}
             </p>
@@ -166,7 +166,7 @@ export default function AppsPage() {
             transition={{ duration: 0.7, ease: EASE }}
           >
             {/* Title */}
-            <h1 className="text-7xl sm:text-8xl md:text-9xl font-extrabold text-foreground tracking-tighter">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold text-foreground tracking-tighter">
               {t('title')}
             </h1>
 
