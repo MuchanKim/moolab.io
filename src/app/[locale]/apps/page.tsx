@@ -80,16 +80,17 @@ function AppCard({
 
   return (
     <Link href={href} className="block">
-      <motion.div
-        className={`group relative flex flex-col gap-3 rounded-[14px] p-6 cursor-pointer transition-all duration-300 ${
+      <div
+        className={`group relative flex flex-col gap-3 rounded-2xl p-6 cursor-pointer transition-all duration-300 overflow-hidden hover:-translate-y-0.5 ${
           isDark
-            ? 'bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.15)] hover:bg-[rgba(255,255,255,0.04)]'
-            : 'bg-white border border-[rgba(0,0,0,0.08)] hover:border-[rgba(0,0,0,0.15)] hover:bg-[#fafafa]'
+            ? 'bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.08)] backdrop-blur-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.3)] hover:border-[rgba(255,255,255,0.14)] hover:bg-[rgba(255,255,255,0.05)]'
+            : 'bg-white border border-[rgba(0,0,0,0.08)] shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.03)] hover:border-[rgba(0,0,0,0.14)] hover:shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]'
         }`}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: EASE, delay }}
       >
+        {/* Dark: glass gradient overlay */}
+        {isDark && (
+          <span className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-[rgba(255,255,255,0.05)] to-transparent" />
+        )}
         {/* Coming Soon corner badge */}
         {comingSoon && (
           <span className={`absolute top-4 right-5 text-[10px] font-semibold tracking-[0.05em] px-2.5 py-1 rounded-full ${
@@ -110,31 +111,31 @@ function AppCard({
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-[17px] font-semibold text-foreground">{name}</h2>
-            <p className={`text-xs mt-1 ${isDark ? 'text-[rgba(255,255,255,0.35)]' : 'text-[rgba(0,0,0,0.4)]'}`}>
+            <p className={`text-xs mt-1 ${isDark ? 'text-[rgba(255,255,255,0.35)]' : 'text-[rgba(0,0,0,0.45)]'}`}>
               {subtitle}
             </p>
           </div>
         </div>
 
         {/* Description */}
-        <p className={`text-[13px] leading-relaxed ${isDark ? 'text-[rgba(255,255,255,0.45)]' : 'text-[rgba(0,0,0,0.5)]'}`}>
+        <p className={`text-[13px] leading-relaxed ${isDark ? 'text-[rgba(255,255,255,0.45)]' : 'text-[rgba(0,0,0,0.55)]'}`}>
           {description}
         </p>
 
         {/* Meta: Soft Fill labels */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md ${
-            isDark ? 'bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.4)]' : 'bg-[rgba(0,0,0,0.04)] text-[rgba(0,0,0,0.45)]'
+          <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md ${
+            isDark ? 'bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.4)]' : 'bg-[rgba(0,0,0,0.05)] text-[rgba(0,0,0,0.5)]'
           }`}>
             <AppleLogo /> {platform}
           </span>
-          <span className={`inline-flex items-center text-[11px] font-medium px-2.5 py-1 rounded-md ${
-            isDark ? 'bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.4)]' : 'bg-[rgba(0,0,0,0.04)] text-[rgba(0,0,0,0.45)]'
+          <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-md ${
+            isDark ? 'bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.4)]' : 'bg-[rgba(0,0,0,0.05)] text-[rgba(0,0,0,0.5)]'
           }`}>
             {category}
           </span>
         </div>
-      </motion.div>
+      </div>
     </Link>
   );
 }
