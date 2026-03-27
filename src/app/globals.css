@@ -94,6 +94,11 @@ html.neural-death header {
   border-bottom-color: transparent !important;
 }
 
+/* T+ 커서 깜빡임 */
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
 /* Card hover shine — 얇은 빛줄기가 대각선으로 쓱 지나감, 가운데서 폭 넓어짐 */
 @keyframes card-shine {
   0% {

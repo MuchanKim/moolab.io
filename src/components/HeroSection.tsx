@@ -21,25 +21,69 @@ const PATHS = {
 };
 
 
-function CountUp({ target, duration = 1.2 }: { target: number; duration?: number }) {
-  const [count, setCount] = useState(0);
-  const [started, setStarted] = useState(false);
+const ORIGIN = new Date('2026-03-19T00:00:00+09:00').getTime();
 
+function getElapsed(now: number) {
+  const diff = Math.max(0, now - ORIGIN);
+  const totalSec = Math.floor(diff / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+  return { days, hours, minutes, seconds };
+}
+
+function pad(n: number) {
+  return n.toString().padStart(2, '0');
+}
+
+function ElapsedTimer({ duration = 1.2 }: { duration?: number }) {
+  const [started, setStarted] = useState(false);
+  const [animProgress, setAnimProgress] = useState(0);
+  const [live, setLive] = useState(getElapsed(Date.now()));
+  const animDone = animProgress >= 1;
+
+  // 초기 카운트업 애니메이션
   useEffect(() => {
     if (!started) return;
     const start = performance.now();
     let raf: number;
     const step = (now: number) => {
-      const progress = Math.min((now - start) / (duration * 1000), 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(eased * target));
-      if (progress < 1) raf = requestAnimationFrame(step);
+      const p = Math.min((now - start) / (duration * 1000), 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setAnimProgress(eased);
+      if (p < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [started, target, duration]);
+  }, [started, duration]);
 
-  return <span ref={(el) => { if (el && !started) setStarted(true); }}>{count}</span>;
+  // 애니메이션 완료 후 실시간 틱
+  useEffect(() => {
+    if (!animDone) return;
+    const id = setInterval(() => setLive(getElapsed(Date.now())), 1000);
+    return () => clearInterval(id);
+  }, [animDone]);
+
+  const target = getElapsed(Date.now());
+  const display = animDone
+    ? live
+    : {
+        days: Math.floor(animProgress * target.days),
+        hours: Math.floor(animProgress * target.hours),
+        minutes: Math.floor(animProgress * target.minutes),
+        seconds: Math.floor(animProgress * target.seconds),
+      };
+
+  return (
+    <span
+      ref={(el) => { if (el && !started) setStarted(true); }}
+      className="font-mono text-[15px] tracking-[0.08em] tabular-nums"
+    >
+      T+{display.days}.{pad(display.hours)}:{pad(display.minutes)}:{pad(display.seconds)}
+      <span className="inline-block w-[7px] h-[15px] bg-current opacity-50 ml-1 align-text-bottom animate-[blink_1s_step-end_infinite]" />
+    </span>
+  );
 }
 
 const MOO_OFFSET = 89;
@@ -532,12 +576,12 @@ export function HeroSection() {
             </svg>
 
             <motion.p
-              className="mt-4 text-lg tracking-[0.03em] text-[#9a9aa6] dark:text-[#8b8b99]"
+              className="mt-4 text-[#888892] dark:text-[#6a6a7a]"
               initial={{ opacity: 0, y: 10 }}
               animate={showEnd ? { opacity: wordmarkOpacity, y: 0 } : { opacity: 0, y: 10 }}
               transition={{ duration: holdElapsed > 0 ? 0.05 : 1.0, ease: EASE }}
             >
-              {showEnd && <CountUp target={Math.max(1, Math.floor((Date.now() - new Date('2026-03-19').getTime()) / 86400000))} />} days — still baking.
+              {showEnd && <ElapsedTimer />}
             </motion.p>
           </motion.div>
         </div>
