@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { NeuralNetwork } from './effects/NeuralNetwork';
+import { Starfield } from './effects/Starfield';
 import { useNeuralGame } from '@/hooks/useNeuralGame';
 import { useTheme } from '@/components/ThemeProvider';
 import { useNeuronGlow } from '@/contexts/NeuronGlowContext';
@@ -150,8 +151,8 @@ function ProgressIndicator({ count, isCleared }: { count: number; isCleared: boo
           }
           ctx.lineTo(x2, CENTER_Y);
           ctx.strokeStyle = arc === 0
-            ? `hsla(45, 90%, 70%, ${0.5 * intensity})`
-            : `hsla(45, 80%, 85%, ${0.25 * intensity})`;
+            ? `hsla(0, 0%, 85%, ${0.5 * intensity})`
+            : `hsla(0, 0%, 92%, ${0.25 * intensity})`;
           ctx.lineWidth = arc === 0 ? 1.0 : 0.5;
           ctx.stroke();
         }
@@ -159,11 +160,11 @@ function ProgressIndicator({ count, isCleared }: { count: number; isCleared: boo
         // 글로우 라인
         ctx.save();
         ctx.shadowBlur = 8;
-        ctx.shadowColor = `hsla(45, 90%, 65%, ${0.35 * intensity})`;
+        ctx.shadowColor = `hsla(0, 0%, 80%, ${0.35 * intensity})`;
         ctx.beginPath();
         ctx.moveTo(x1, CENTER_Y);
         ctx.lineTo(x2, CENTER_Y);
-        ctx.strokeStyle = `hsla(45, 90%, 70%, ${0.12 * intensity})`;
+        ctx.strokeStyle = `hsla(0, 0%, 85%, ${0.12 * intensity})`;
         ctx.lineWidth = 3;
         ctx.stroke();
         ctx.restore();
@@ -176,7 +177,7 @@ function ProgressIndicator({ count, isCleared }: { count: number; isCleared: boo
           ctx.beginPath();
           ctx.moveTo(bx, by);
           ctx.lineTo(bx + (Math.random() - 0.5) * 4, by + bend);
-          ctx.strokeStyle = `hsla(45, 85%, 80%, ${0.35 * intensity})`;
+          ctx.strokeStyle = `hsla(0, 0%, 90%, ${0.35 * intensity})`;
           ctx.lineWidth = 0.4;
           ctx.stroke();
         }
@@ -195,9 +196,9 @@ function ProgressIndicator({ count, isCleared }: { count: number; isCleared: boo
             : 0;
           const glowR = DOT_R * 4 + pulse * 6;
           const grad = ctx.createRadialGradient(x, CENTER_Y, 0, x, CENTER_Y, glowR);
-          grad.addColorStop(0, `hsla(45, 90%, 70%, ${0.3 + pulse * 0.3})`);
-          grad.addColorStop(0.5, `hsla(45, 85%, 60%, ${0.1 + pulse * 0.1})`);
-          grad.addColorStop(1, 'hsla(45, 80%, 55%, 0)');
+          grad.addColorStop(0, `hsla(0, 0%, 85%, ${0.3 + pulse * 0.3})`);
+          grad.addColorStop(0.5, `hsla(0, 0%, 70%, ${0.1 + pulse * 0.1})`);
+          grad.addColorStop(1, 'hsla(0, 0%, 65%, 0)');
           ctx.fillStyle = grad;
           ctx.beginPath();
           ctx.arc(x, CENTER_Y, glowR, 0, Math.PI * 2);
@@ -206,13 +207,13 @@ function ProgressIndicator({ count, isCleared }: { count: number; isCleared: boo
           // 코어
           ctx.beginPath();
           ctx.arc(x, CENTER_Y, DOT_R, 0, Math.PI * 2);
-          ctx.fillStyle = `hsla(45, 85%, ${70 + pulse * 15}%, ${0.9 + pulse * 0.1})`;
+          ctx.fillStyle = `hsla(0, 0%, ${82 + pulse * 15}%, ${0.9 + pulse * 0.1})`;
           ctx.fill();
 
           // 하이라이트
           ctx.beginPath();
           ctx.arc(x, CENTER_Y, DOT_R * 0.4, 0, Math.PI * 2);
-          ctx.fillStyle = `hsla(45, 30%, 95%, ${0.6 + pulse * 0.4})`;
+          ctx.fillStyle = `hsla(0, 0%, 97%, ${0.6 + pulse * 0.4})`;
           ctx.fill();
         } else {
           // 비활성
@@ -238,8 +239,8 @@ function ProgressIndicator({ count, isCleared }: { count: number; isCleared: boo
 
         // 불똥 글로우
         const sg = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r * 3);
-        sg.addColorStop(0, `hsla(45, 90%, 85%, ${alpha * 0.5})`);
-        sg.addColorStop(1, 'hsla(45, 80%, 65%, 0)');
+        sg.addColorStop(0, `hsla(0, 0%, 93%, ${alpha * 0.5})`);
+        sg.addColorStop(1, 'hsla(0, 0%, 75%, 0)');
         ctx.fillStyle = sg;
         ctx.beginPath();
         ctx.arc(s.x, s.y, r * 3, 0, Math.PI * 2);
@@ -248,7 +249,7 @@ function ProgressIndicator({ count, isCleared }: { count: number; isCleared: boo
         // 코어
         ctx.beginPath();
         ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(40, 95%, 90%, ${alpha * 0.9})`;
+        ctx.fillStyle = `hsla(0, 0%, 95%, ${alpha * 0.9})`;
         ctx.fill();
       }
 
@@ -337,8 +338,9 @@ export function HeroSection() {
     return () => ro.disconnect();
   }, [game.updatePositions]);
 
-  // 워드마크 글리치 rAF loop
+  // 워드마크 글리치 (라이트모드만)
   useEffect(() => {
+    if (isDark) return; // 다크모드: 글리치 없음
     const svg = svgRef.current;
     if (!svg) return;
     let rafId = 0;
@@ -346,7 +348,7 @@ export function HeroSection() {
 
     const glitchLoop = () => {
       const count = game.activatedCount;
-      if (count === 0 || isClearedAndDone || !isDark) {
+      if (count === 0 || isClearedAndDone) {
         svg.style.transform = '';
         rafId = requestAnimationFrame(glitchLoop);
         return;
@@ -393,16 +395,26 @@ export function HeroSection() {
       onMouseLeave={() => setHoldActive(false)}
     >
       {isDark && (
-        <NeuralNetwork
-          hiddenNeurons={game.hiddenNeurons}
-          onActivate={game.activate}
-          clearWaveProgress={game.clearWaveProgress}
-          isCleared={game.isCleared}
-          holdActive={holdActive}
-          onHoldProgress={setHoldIntensity}
-          onDeath={() => setIsDead(true)}
-          onHueChange={setNeuronHue}
-        />
+        <>
+          <Starfield count={3000} opacity={game.isCleared ? 1 : 0.5} />
+          <NeuralNetwork
+            count={80}
+            linkDistance={120}
+            synapseOpacity={0}
+            neuronOpacity={0}
+            minSize={0.4}
+            maxSize={2.0}
+            driftSpeed={0.06}
+            hiddenNeurons={game.hiddenNeurons}
+            onActivate={game.activate}
+            clearWaveProgress={game.clearWaveProgress}
+            isCleared={game.isCleared}
+            holdActive={holdActive}
+            onHoldProgress={setHoldIntensity}
+            onDeath={() => setIsDead(true)}
+            onHueChange={setNeuronHue}
+          />
+        </>
       )}
 
       <div className="relative z-10 flex flex-col items-center gap-4 sm:gap-6 w-full max-w-4xl">
@@ -426,16 +438,16 @@ export function HeroSection() {
               overflow="visible"
               className="w-56 sm:w-72 md:w-[380px] h-auto"
               style={{
-                color: holdActive || holdIntensity > 0
-                  ? `hsl(${neuronHue}, ${60 + holdIntensity * 35}%, ${85 + holdIntensity * 15}%)`
-                  : isClearedAndDone
-                    ? `hsl(${neuronHue}, 30%, 88%)`
+                color: isDark && (holdActive || holdIntensity > 0)
+                  ? `hsl(0, 0%, ${90 + holdIntensity * 10}%)`
+                  : isDark && isClearedAndDone
+                    ? `hsl(0, 0%, 92%)`
                     : 'var(--foreground)',
                 opacity: wordmarkOpacity,
-                filter: holdActive || holdIntensity > 0
-                  ? `drop-shadow(0 0 ${8 + holdIntensity * 30}px hsla(${neuronHue}, 90%, 70%, ${0.3 + holdIntensity * 0.5})) drop-shadow(0 0 ${20 + holdIntensity * 60}px hsla(${neuronHue}, 80%, 60%, ${holdIntensity * 0.3}))`
-                  : isClearedAndDone
-                    ? `drop-shadow(0 0 12px hsla(${neuronHue}, 60%, 70%, 0.4)) drop-shadow(0 0 40px hsla(${neuronHue}, 50%, 60%, 0.15))`
+                filter: isDark && (holdActive || holdIntensity > 0)
+                  ? `drop-shadow(0 0 ${8 + holdIntensity * 30}px hsla(0, 0%, 85%, ${0.3 + holdIntensity * 0.5})) drop-shadow(0 0 ${20 + holdIntensity * 60}px hsla(0, 0%, 75%, ${holdIntensity * 0.3}))`
+                  : isDark && isClearedAndDone
+                    ? `drop-shadow(0 0 12px hsla(0, 0%, 85%, 0.4)) drop-shadow(0 0 40px hsla(0, 0%, 75%, 0.15))`
                     : 'none',
                 transition: holdActive || holdIntensity > 0 ? 'none' : 'opacity 0.5s ease, filter 1.2s ease, color 0.3s ease',
               }}
