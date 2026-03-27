@@ -38,310 +38,110 @@ function SlotNumber({ target, delay = 0 }: { target: number; delay?: number }) {
   );
 }
 
-/* ── Theme-aware card surfaces ── */
-const CARD_THEME = {
-  dark: {
-    bg: 'linear-gradient(165deg, #2a2b30 0%, #1c1d21 40%, #161719 100%)',
-    border: 'rgba(255,255,255,0.06)',
-    shadow: '0 1px 0 rgba(255,255,255,0.04) inset, 0 4px 24px rgba(0,0,0,0.4)',
-    shimmerBase: 'from-white/[0.04] via-transparent to-transparent',
-    shimmerHover: 'from-white/[0.08] via-white/[0.02] to-transparent',
-    btnBg: 'linear-gradient(145deg, #45464d, #35363c, #2a2b30)',
-    btnShadow: '0 1px 0 rgba(255,255,255,0.08) inset, 0 2px 8px rgba(0,0,0,0.4)',
-    btnShimmer: 'via-white/[0.12]',
-    textPrimary: 'text-white',
-    textSecondary: 'text-white/50',
-    btnText: 'text-white/90',
-    iconShadowHover: '0 8px 32px rgba(0,0,0,0.5)',
-  },
-  light: {
-    bg: 'linear-gradient(165deg, #ffffff 0%, #f7f7fa 50%, #f2f2f6 100%)',
-    border: 'rgba(0,0,0,0.05)',
-    shadow: '0 1px 0 rgba(255,255,255,1) inset, 0 -1px 0 rgba(0,0,0,0.02) inset, 0 4px 12px rgba(0,0,0,0.05)',
-    shimmerBase: 'from-white/40 via-transparent to-transparent',
-    shimmerHover: 'from-white/70 via-white/15 to-transparent',
-    btnBg: 'linear-gradient(145deg, #2a2a30, #1a1a1e, #111114)',
-    btnShadow: '0 1px 0 rgba(255,255,255,0.06) inset, 0 2px 8px rgba(0,0,0,0.2)',
-    btnShimmer: 'via-white/[0.12]',
-    textPrimary: 'text-gray-900',
-    textSecondary: 'text-gray-400',
-    btnText: 'text-white/90',
-    iconShadowHover: '0 8px 32px rgba(0,0,0,0.1)',
-  },
-} as const;
-
 /* ── Apple logo SVG ── */
 const AppleLogo = () => (
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
   </svg>
 );
 
-/* ── Apple platform labels ── */
-const APPLE_PLATFORMS = new Set(['macOS', 'iOS', 'iPadOS']);
-
-/* ── Unified label shell ── */
-function Tag({ bg, fg, border, children }: { bg: string; fg: string; border: string; children: React.ReactNode }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-3 py-[5px] text-[11px] font-bold tracking-wider leading-none"
-      style={{ backgroundColor: bg, color: fg, border: `1px solid ${border}` }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function AppLabel({ text, isDark }: { text: string; isDark: boolean }) {
-  const isApple = APPLE_PLATFORMS.has(text) || [...APPLE_PLATFORMS].some(p => text.includes(p));
-  if (isApple) {
-    return isDark
-      ? <Tag bg="#000000" fg="#ffffff" border="#2a2a2a"><AppleLogo />{text}</Tag>
-      : <Tag bg="#ffffff" fg="#000000" border="#d4d4d8"><AppleLogo />{text}</Tag>;
-  }
-  return isDark
-    ? <Tag bg="#28282e" fg="#a0a0a8" border="#3a3a42">{text}</Tag>
-    : <Tag bg="#ebebef" fg="#555560" border="#d0d0d6">{text}</Tag>;
-}
-
-
-
-/* ── Placeholder icon for coming soon apps ── */
-function PlaceholderIcon({ isDark = true }: { isDark?: boolean }) {
-  return (
-    <div
-      className="flex h-full w-full items-center justify-center"
-      style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3a3a42, #2a2a32)'
-          : 'linear-gradient(135deg, #e0e0e6, #d0d0d8)',
-      }}
-    >
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-        <line x1="12" y1="22.08" x2="12" y2="12" />
-      </svg>
-    </div>
-  );
-}
-
-/* ── App Card ── */
+/* ── App Card (B안: Raycast style + Soft Fill + Corner Badge) ── */
 interface AppCardProps {
   name: string;
   subtitle: string;
-  labels: string[];
-  href?: string;
+  description: string;
+  platform: string;
+  category: string;
+  href: string;
   comingSoon?: boolean;
   delay?: number;
-  icon?: React.ReactNode | ((isDark: boolean) => React.ReactNode);
+  iconPath: string;
 }
-
-const MAX_VISIBLE_LABELS = 2;
 
 function AppCard({
   name,
   subtitle,
-  labels,
+  description,
+  platform,
+  category,
   href,
   comingSoon = false,
   delay = 0,
-  icon,
+  iconPath,
 }: AppCardProps) {
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const isDark = !mounted || theme === 'dark';
-  const ct = isDark ? CARD_THEME.dark : CARD_THEME.light;
-
-  // Deduplicate labels
-  const uniqueLabels = [...new Set(labels)];
-  const visibleLabels = uniqueLabels.slice(0, MAX_VISIBLE_LABELS);
-  const extraCount = uniqueLabels.length - MAX_VISIBLE_LABELS;
+  const iconSrc = isDark
+    ? `${iconPath}/appIcon_dark.png`
+    : `${iconPath}/appIcon_default.png`;
 
   return (
-    <motion.div
-      className="group relative flex flex-col items-center rounded-2xl px-10 pt-6 pb-8 text-center transition-all duration-500 overflow-hidden h-[360px]"
-      style={{
-        background: ct.bg,
-        border: `1px solid ${ct.border}`,
-        boxShadow: ct.shadow,
-      }}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: EASE, delay }}
-    >
-      {/* Shimmer overlay */}
-      <span className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${ct.shimmerBase} opacity-100 transition-opacity duration-500 group-hover:opacity-0`} />
-      <span className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${ct.shimmerHover} opacity-0 transition-opacity duration-500 group-hover:opacity-100`} />
-      {/* Hover shine — 얇은 광택 빛줄기, 가운데서 넓어짐 */}
-      <span className="pointer-events-none absolute inset-0 overflow-hidden [&>span]:opacity-0 [&>span]:group-hover:animate-[card-shine_0.8s_ease-in-out_forwards]">
-        <span className="absolute -inset-[50%] bg-[linear-gradient(90deg,transparent_38%,rgba(255,255,255,0.12)_44%,rgba(255,255,255,0.25)_50%,rgba(255,255,255,0.12)_56%,transparent_62%)]" />
-      </span>
-
-      {/* Icon — clickable if has href */}
-      {href && !comingSoon ? (
-        <Link href={href} className="relative mb-5 h-28 w-28 overflow-hidden rounded-[24px] shadow-lg transition-all duration-300 group-hover:scale-105 block">
-          {typeof icon === 'function' ? icon(isDark) : icon}
-        </Link>
-      ) : (
-        <div className="relative mb-5 h-28 w-28 overflow-hidden rounded-[24px] shadow-lg transition-all duration-300 group-hover:scale-105">
-          {typeof icon === 'function' ? icon(isDark) : icon}
-        </div>
-      )}
-
-      {/* Name */}
-      <h2 className={`relative text-2xl font-bold tracking-tight ${ct.textPrimary}`}>
-        {name}
-      </h2>
-
-      {/* Tagline */}
-      <p className={`relative mt-2 text-sm ${ct.textSecondary}`}>
-        {subtitle}
-      </p>
-
-      {/* Labels — 멀티플랫폼이면 세로, 아니면 가로 */}
-      <div className={`relative mt-3 flex items-center gap-2 ${visibleLabels.some(l => l.includes('·')) ? 'flex-col' : 'flex-row'}`}>
-        {visibleLabels.map((label) =>
-          <AppLabel key={label} text={label} isDark={isDark} />
-        )}
-        {extraCount > 0 && (
-          <span
-            className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wider"
-            style={{
-              backgroundColor: 'rgba(140,140,140,0.12)',
-              color: '#8B8B8B',
-              border: '1px solid rgba(140,140,140,0.25)',
-            }}
-          >
-            +{extraCount}
-          </span>
-        )}
-      </div>
-
-      {/* Action button — full-width rounded, pushed to bottom */}
-      <div className="relative mt-auto pt-5 w-full px-2">
-        {comingSoon ? (
-          <div
-            className="flex items-center justify-center rounded-xl py-2 text-sm font-semibold cursor-not-allowed"
-            style={{
-              background: isDark
-                ? 'linear-gradient(145deg, #28292e, #222226)'
-                : 'linear-gradient(145deg, #e2e2e6, #d8d8dc)',
-              color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
-            }}
-          >
-            Coming Soon
+    <Link href={href} className="block">
+      <motion.div
+        className={`group relative flex flex-col gap-3 rounded-[14px] p-6 cursor-pointer transition-all duration-300 ${
+          isDark
+            ? 'bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.15)] hover:bg-[rgba(255,255,255,0.04)]'
+            : 'bg-white border border-[rgba(0,0,0,0.08)] hover:border-[rgba(0,0,0,0.15)] hover:bg-[#fafafa]'
+        }`}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: EASE, delay }}
+      >
+        {/* Top: Icon + Name/Subtitle */}
+        <div className="flex items-center gap-4">
+          <div className={`w-14 h-14 rounded-[14px] overflow-hidden flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${
+            isDark ? 'shadow-[0_4px_12px_rgba(0,0,0,0.3)]' : 'shadow-[0_4px_12px_rgba(0,0,0,0.1)]'
+          }`}>
+            <Image src={iconSrc} alt={name} width={56} height={56} className="h-full w-full object-cover" />
           </div>
-        ) : (
-          <Link
-            href={href ?? '/apps'}
-            className={`group/btn relative flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-semibold ${ct.btnText} transition-all duration-300 active:scale-[0.98] overflow-hidden`}
-            style={{
-              background: ct.btnBg,
-              boxShadow: ct.btnShadow,
-            }}
-          >
-            <span className={`absolute inset-0 bg-gradient-to-r from-white/0 ${ct.btnShimmer} to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700`} />
-            <span className="relative">Explore</span>
-            <svg className="relative" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </Link>
-        )}
-      </div>
-    </motion.div>
-  );
-}
+          <div className="flex-1 min-w-0">
+            <h2 className="flex items-center text-[17px] font-semibold text-foreground">
+              {name}
+              {comingSoon && (
+                <span className={`ml-2 text-[9px] font-semibold tracking-[0.05em] px-2 py-0.5 rounded ${
+                  isDark
+                    ? 'bg-[rgba(255,180,60,0.1)] text-[rgba(255,180,60,0.5)] border border-[rgba(255,180,60,0.15)]'
+                    : 'bg-[rgba(180,120,20,0.1)] text-[rgba(160,100,10,0.75)] border border-[rgba(180,120,20,0.18)]'
+                }`}>
+                  Coming Soon
+                </span>
+              )}
+            </h2>
+            <p className={`text-xs mt-1 ${isDark ? 'text-[rgba(255,255,255,0.35)]' : 'text-[rgba(0,0,0,0.4)]'}`}>
+              {subtitle}
+            </p>
+          </div>
+        </div>
 
-/* ── SnapDMG card (with theme-aware icon) ── */
-function SnapDMGCard({ delay }: { delay: number }) {
-  const t = useTranslations('apps');
-  const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const iconSrc = mounted && theme === 'dark'
-    ? '/apps/snapDMG/appIcon_dark.png'
-    : '/apps/snapDMG/appIcon_default.png';
+        {/* Description */}
+        <p className={`text-[13px] leading-relaxed ${isDark ? 'text-[rgba(255,255,255,0.45)]' : 'text-[rgba(0,0,0,0.5)]'}`}>
+          {description}
+        </p>
 
-  return (
-    <AppCard
-      name="SnapDMG"
-      subtitle={t('snapdmgSubtitle')}
-      labels={['macOS', 'Util']}
-      href="/apps/snapdmg"
-      delay={delay}
-      icon={
-        <Image
-          src={iconSrc}
-          alt="SnapDMG"
-          width={128}
-          height={128}
-          className="h-full w-full object-cover"
-        />
-      }
-    />
-  );
-}
-
-/* ── SnapDock card (with theme-aware icon) ── */
-function SnapDockCard({ delay }: { delay: number }) {
-  const t = useTranslations('snapdock');
-  const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const iconSrc = mounted && theme === 'dark'
-    ? '/apps/snapdock/appIcon_dark.png'
-    : '/apps/snapdock/appIcon_default.png';
-
-  return (
-    <AppCard
-      name={t('name')}
-      subtitle={t('subtitle')}
-      labels={[t('platform'), t('category')]}
-      href="/apps/snapdock"
-      delay={delay}
-      icon={
-        <Image
-          src={iconSrc}
-          alt="SnapDock"
-          width={128}
-          height={128}
-          className="h-full w-full object-cover"
-        />
-      }
-    />
-  );
-}
-
-/* ── Gitivity card (with theme-aware icon) ── */
-function GitivityCard({ delay }: { delay: number }) {
-  const t = useTranslations('apps');
-
-  return (
-    <AppCard
-      name="Gitivity"
-      subtitle={t('gitivitySubtitle')}
-      labels={['iOS · iPadOS · macOS', 'Productivity']}
-      comingSoon
-      delay={delay}
-      icon={(isDark) => (
-        <Image
-          key={isDark ? 'dark' : 'light'}
-          src={isDark ? '/apps/gitivity/appIcon_dark.png' : '/apps/gitivity/appIcon_default.png'}
-          alt="Gitivity"
-          width={128}
-          height={128}
-          className="h-full w-full object-cover"
-        />
-      )}
-    />
+        {/* Meta: Soft Fill labels */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md ${
+            isDark ? 'bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.4)]' : 'bg-[rgba(0,0,0,0.04)] text-[rgba(0,0,0,0.45)]'
+          }`}>
+            <AppleLogo /> {platform}
+          </span>
+          <span className={`inline-flex items-center text-[11px] font-medium px-2.5 py-1 rounded-md ${
+            isDark ? 'bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.4)]' : 'bg-[rgba(0,0,0,0.04)] text-[rgba(0,0,0,0.45)]'
+          }`}>
+            {category}
+          </span>
+        </div>
+      </motion.div>
+    </Link>
   );
 }
 
 export default function AppsPage() {
   const t = useTranslations('apps');
+  const tSnapdock = useTranslations('snapdock');
 
   const apps = [
     { name: 'SnapDMG', comingSoon: false },
@@ -442,13 +242,39 @@ export default function AppsPage() {
           {/* Divider */}
           <div className="mb-12 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
-          {/* App Grid — 최신 업데이트 순 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <SnapDMGCard delay={0.1} />
-
-            <SnapDockCard delay={0.2} />
-
-            <GitivityCard delay={0.3} />
+          {/* App Grid — 2열 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <AppCard
+              name="SnapDMG"
+              subtitle={t('snapdmgSubtitle')}
+              description="Drag, drop, and export beautifully styled DMG installers. No terminal needed."
+              platform="macOS"
+              category="Util"
+              href="/apps/snapdmg"
+              iconPath="/apps/snapDMG"
+              delay={0.1}
+            />
+            <AppCard
+              name="SnapDock"
+              subtitle={tSnapdock('subtitle')}
+              description="Summon a floating dock at your cursor with a keyboard shortcut. Pin, reorder, launch."
+              platform="macOS"
+              category="Util"
+              href="/apps/snapdock"
+              iconPath="/apps/snapdock"
+              delay={0.2}
+            />
+            <AppCard
+              name="Gitivity"
+              subtitle={t('gitivitySubtitle')}
+              description="AI-powered GitHub activity summaries with widgets and streak tracking across devices."
+              platform="iOS · iPadOS · macOS"
+              category="Productivity"
+              href="/apps/gitivity"
+              iconPath="/apps/gitivity"
+              comingSoon
+              delay={0.3}
+            />
           </div>
         </div>
       </main>

@@ -64,6 +64,33 @@ function CategoryBadge({ text }: { text: string }) {
   );
 }
 
+/* ── Download / Coming Soon 버튼 ── */
+const DownloadIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
+export function DownloadButton({ url }: { url?: string }) {
+  if (url) {
+    return (
+      <a
+        href={url}
+        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold dark:bg-[#2a2b30] dark:text-[rgba(255,255,255,0.85)] bg-[#3a3a42] text-[rgba(255,255,255,0.85)] transition-all duration-200 hover:opacity-85 active:scale-[0.97]"
+      >
+        <DownloadIcon />
+        Download
+      </a>
+    );
+  }
+
+  return (
+    <span className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold dark:bg-[#222226] dark:text-[rgba(255,255,255,0.25)] bg-[#e0e0e4] text-[rgba(0,0,0,0.25)] cursor-not-allowed">
+      Coming Soon
+    </span>
+  );
+}
+
 function FeatureCard({ icon, title, body, delay }: { icon: React.ReactNode; title: string; body: string; delay: number }) {
   return (
     <motion.div
@@ -291,25 +318,8 @@ export function AppDetailLayout({
             {/* Sidebar */}
             <aside className="w-full md:w-[160px] flex-shrink-0">
               <div className="md:sticky md:top-[100px]">
-                {/* Download — Muted + Lucide icon */}
-                {downloadUrl ? (
-                  <a
-                    href={downloadUrl}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold dark:bg-[#2a2b30] dark:text-[rgba(255,255,255,0.85)] bg-[#3a3a42] text-[rgba(255,255,255,0.85)] transition-all duration-200 hover:opacity-85 active:scale-[0.97]"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Download
-                  </a>
-                ) : (
-                  <span className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold dark:bg-[#222226] dark:text-[rgba(255,255,255,0.25)] bg-[#e0e0e4] text-[rgba(0,0,0,0.25)] cursor-not-allowed">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Download
-                  </span>
-                )}
+                {/* Download / Coming Soon */}
+                <DownloadButton url={downloadUrl} />
 
                 {/* Divider */}
                 <div className="my-5 h-px dark:bg-[rgba(255,255,255,0.06)] bg-[rgba(0,0,0,0.08)]" />

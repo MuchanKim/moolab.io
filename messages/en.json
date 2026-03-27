@@ -87,6 +87,27 @@
     "featuresTitle": "Features",
     "backToApps": "Back to Apps"
   },
+  "gitivity": {
+    "name": "Gitivity",
+    "subtitle": "GitHub activity, at a glance",
+    "description": "Gitivity uses AI to analyze your GitHub activity and deliver clear, visual summaries. Track contributions, spot trends, and stay on top of your open-source life — all from a single, beautiful interface across iPhone, iPad, and Mac.",
+    "insightsTitle": "AI Insights",
+    "insightsBody": "Get smart summaries of your GitHub activity. AI highlights patterns, streaks, and key contributions you might have missed.",
+    "widgetsTitle": "Widgets & Live Activity",
+    "widgetsBody": "Glanceable widgets for your Home Screen and Lock Screen. See your contribution graph and streak without opening the app.",
+    "crossPlatformTitle": "Cross-Platform",
+    "crossPlatformBody": "Native experience on iPhone, iPad, and Mac. iCloud sync keeps everything in perfect harmony.",
+    "privacyTitle": "Privacy First",
+    "privacyBody": "Your GitHub token stays on-device. No servers, no tracking. Just you and your data.",
+    "featuresTitle": "Features",
+    "feature1": "AI-powered activity summaries",
+    "feature2": "Contribution graph and streak tracking",
+    "feature3": "Home Screen and Lock Screen widgets",
+    "feature4": "Repository-level breakdown",
+    "feature5": "iCloud sync across devices",
+    "feature6": "Dark mode and customizable themes",
+    "backToApps": "Back to Apps"
+  },
   "snapdockPrivacy": {
     "title": "Privacy Policy — SnapDock",
     "lastUpdated": "Last updated: March 24, 2026",

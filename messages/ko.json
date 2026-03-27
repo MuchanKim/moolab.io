@@ -87,6 +87,27 @@
     "featuresTitle": "기능",
     "backToApps": "Apps로 돌아가기"
   },
+  "gitivity": {
+    "name": "Gitivity",
+    "subtitle": "GitHub 활동을 AI로 한눈에",
+    "description": "Gitivity는 AI로 GitHub 활동을 분석하고 깔끔한 시각적 요약을 제공합니다. 기여 추적, 트렌드 파악, 오픈소스 활동 관리를 iPhone, iPad, Mac에서 하나의 아름다운 인터페이스로.",
+    "insightsTitle": "AI 인사이트",
+    "insightsBody": "GitHub 활동의 스마트 요약을 받아보세요. AI가 패턴, 연속 기여, 주요 활동을 알려줍니다.",
+    "widgetsTitle": "위젯 & 라이브 액티비티",
+    "widgetsBody": "홈 화면과 잠금 화면 위젯으로 한눈에 확인. 앱을 열지 않고도 기여 그래프와 연속 기여를 볼 수 있습니다.",
+    "crossPlatformTitle": "크로스 플랫폼",
+    "crossPlatformBody": "iPhone, iPad, Mac에서 네이티브 경험. iCloud 동기화로 모든 기기에서 완벽한 조화.",
+    "privacyTitle": "프라이버시 우선",
+    "privacyBody": "GitHub 토큰은 기기에만 저장됩니다. 서버 없음, 추적 없음. 오직 당신과 당신의 데이터.",
+    "featuresTitle": "기능",
+    "feature1": "AI 기반 활동 요약",
+    "feature2": "기여 그래프 및 연속 기여 추적",
+    "feature3": "홈 화면 및 잠금 화면 위젯",
+    "feature4": "저장소별 상세 분석",
+    "feature5": "기기 간 iCloud 동기화",
+    "feature6": "다크 모드 및 커스텀 테마",
+    "backToApps": "Apps로 돌아가기"
+  },
   "snapdockPrivacy": {
     "title": "개인정보 처리방침 — SnapDock",
     "lastUpdated": "최종 수정: 2026년 3월 24일",
