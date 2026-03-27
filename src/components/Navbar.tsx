@@ -88,36 +88,45 @@ function MoolabLogo() {
   );
 }
 
-function ThemeIcon() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-
+function SunIcon({ size = 12 }: { size?: number }) {
   return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill={isDark ? 'none' : 'currentColor'}
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-    >
-      <circle cx="12" cy="12" r="4.5" />
-      <path d="M12 2v2.5M12 19.5V22M4.22 4.22l1.77 1.77M18.01 18.01l1.77 1.77M2 12h2.5M19.5 12H22M4.22 19.78l1.77-1.77M18.01 5.99l1.77-1.77" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
     </svg>
   );
 }
 
-function DarkModeToggle() {
-  const { toggle } = useTheme();
+function MoonIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+    </svg>
+  );
+}
+
+function ThemePillToggle() {
+  const { theme, toggle } = useTheme();
+  const isDark = theme === 'dark';
 
   return (
     <button
       onClick={toggle}
-      className="flex items-center justify-center w-8 h-8 text-foreground hover:opacity-60 transition-opacity cursor-pointer"
-      aria-label="Toggle dark mode"
+      aria-label="Toggle theme"
+      className="relative w-12 h-[26px] rounded-full cursor-pointer transition-colors duration-300 flex-shrink-0"
+      style={{ background: isDark ? '#2a2b30' : '#b0b0b8' }}
     >
-      <ThemeIcon />
+      <div
+        className="absolute top-[3px] w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        style={{
+          left: isDark ? '25px' : '3px',
+          background: isDark ? '#111214' : '#fff',
+          color: isDark ? '#aaa' : '#555',
+          boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 4px rgba(0,0,0,0.15)',
+        }}
+      >
+        {isDark ? <MoonIcon /> : <SunIcon />}
+      </div>
     </button>
   );
 }
@@ -276,7 +285,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, toggle } = useTheme();
+  const { theme } = useTheme();
 
   const langOptions = [
     { short: 'KO', label: '한국어', value: 'ko' },
@@ -360,21 +369,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* 테마 토글 */}
-          <button
-            onClick={toggle}
-            aria-label="Toggle theme"
-            className="flex items-center justify-center cursor-pointer transition-opacity duration-200 hover:opacity-70"
-          >
-            {theme === 'dark' ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)" stroke="none">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-              </svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(0,0,0,0.45)" stroke="none">
-                <circle cx="12" cy="12" r="5"/><rect x="11" y="0.5" width="2" height="3" rx="1"/><rect x="11" y="20.5" width="2" height="3" rx="1"/><rect x="3.4" y="3.93" width="2" height="3" rx="1" transform="rotate(-45 4.4 5.43)"/><rect x="17.53" y="18.07" width="2" height="3" rx="1" transform="rotate(-45 18.53 19.57)"/><rect x="0.5" y="11" width="3" height="2" rx="1"/><rect x="20.5" y="11" width="3" height="2" rx="1"/><rect x="3.93" y="17.53" width="3" height="2" rx="1" transform="rotate(-45 5.43 18.53)"/><rect x="18.07" y="3.4" width="3" height="2" rx="1" transform="rotate(-45 19.57 4.4)"/>
-              </svg>
-            )}
-          </button>
+          <ThemePillToggle />
         </motion.div>
       </motion.nav>
     </motion.div>
@@ -385,6 +380,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
 const NAV_LINKS = [
   { label: 'About',  href: '/about' },
   { label: 'Apps',   href: '/apps' },
+  { label: 'Labs',   href: '/labs' },
   { label: 'Store',  href: '/store' },
 ] as const;
 
@@ -394,7 +390,7 @@ export function Navbar() {
   const [hidden, setHidden] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const prevScrollY = useRef(0);
-  const { theme, toggle } = useTheme();
+  const { theme } = useTheme();
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
@@ -450,7 +446,7 @@ export function Navbar() {
           transition: NAV_CONFIG.scroll.transition,
         }}
       >
-        <nav className="relative mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-6 sm:py-5 md:px-12">
+        <nav className="relative mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-6 sm:py-5 md:px-8">
 
           {/* 로고 */}
           <a href="/" className="cursor-pointer relative z-50">
@@ -459,7 +455,7 @@ export function Navbar() {
 
           {/* 데스크탑: 우측 (탭 + 구분선 + 언어 + 테마) */}
           <div className="hidden items-center md:flex" style={{ gap: NAV_CONFIG.rightBar.gap }}>
-            <ul className="flex items-center gap-6">
+            <ul className="flex items-center gap-3">
               {NAV_LINKS.map(({ label, href }) => (
                 <li key={label}>
                   <NavLink href={href}>
@@ -474,22 +470,8 @@ export function Navbar() {
 
             <LanguageSwitcher />
 
-            {/* 테마 토글 — naked icon */}
-            <button
-              onClick={toggle}
-              aria-label="Toggle theme"
-              className="flex items-center justify-center cursor-pointer transition-opacity duration-200 hover:opacity-70"
-            >
-              {theme === 'dark' ? (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)" stroke="none">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                </svg>
-              ) : (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(0,0,0,0.45)" stroke="none">
-                  <circle cx="12" cy="12" r="5"/><rect x="11" y="0.5" width="2" height="3" rx="1"/><rect x="11" y="20.5" width="2" height="3" rx="1"/><rect x="3.4" y="3.93" width="2" height="3" rx="1" transform="rotate(-45 4.4 5.43)"/><rect x="17.53" y="18.07" width="2" height="3" rx="1" transform="rotate(-45 18.53 19.57)"/><rect x="0.5" y="11" width="3" height="2" rx="1"/><rect x="20.5" y="11" width="3" height="2" rx="1"/><rect x="3.93" y="17.53" width="3" height="2" rx="1" transform="rotate(-45 5.43 18.53)"/><rect x="18.07" y="3.4" width="3" height="2" rx="1" transform="rotate(-45 19.57 4.4)"/>
-                </svg>
-              )}
-            </button>
+            {/* 테마 토글 — Pill Switch */}
+            <ThemePillToggle />
           </div>
 
           {/* 모바일: 햄버거 버튼 */}
